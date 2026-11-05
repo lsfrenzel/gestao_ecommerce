@@ -1,0 +1,6 @@
+{% load ui %}<div class="card kpi {{ extra_class }}">
+  <span class="icon"><i class="bi bi-{{ icon }}"></i></span>
+  <div class="label">{{ label }}{% if tip %} <i class="bi bi-info-circle" title="{{ tip }}" data-bs-toggle="tooltip"></i>{% endif %}</div>
+  <div class="value">{{ value }}</div>
+  <div class="hint">{% if delta is not None %}<span class="{% if delta >= 0 %}delta-up{% else %}delta-down{% endif %}"><i class="bi bi-arrow-{% if delta >= 0 %}up{% else %}down{% endif %}-right"></i> {{ delta|pct }}</span> vs. período anterior{% else %}{{ hint|default:"&nbsp;"|safe }}{% endif %}</div>
+</div>

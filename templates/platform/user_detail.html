@@ -1,0 +1,41 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ obj.full_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ obj.full_name }}</h1><div class="subtitle">{{ obj.email }}{% if obj.is_superuser %} · SUPER ADMIN{% endif %}</div></div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if obj.is_active %}
+    <form method="post" action="{% url 'platform:user_access_link' obj.pk %}" data-confirm="Enviar um link seguro de {% if obj.has_usable_password %}redefinição de senha{% else %}ativação{% endif %} para {{ obj.email }}?">{% csrf_token %}
+      <button class="btn btn-outline-primary"><i class="bi bi-envelope me-1"></i>{% if obj.has_usable_password %}Enviar redefinição de acesso{% else %}Reenviar convite{% endif %}</button></form>
+    {% endif %}
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-header">Informações cadastrais</div><div class="card-body small">
+      <div>Telefone: {{ obj.phone|default:"—" }}</div><div>Cadastro: {{ obj.date_joined|date:"d/m/Y H:i" }}</div>
+      <div>Último acesso: {{ obj.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</div>
+      <div>Senha definida: {% if obj.has_usable_password %}sim{% else %}não (convite pendente){% endif %}</div>
+      <div>Situação: {% if obj.is_active %}<span class="badge status-ok">Ativo</span>{% else %}<span class="badge status-out">Bloqueado</span> — {{ obj.blocked_reason }}{% endif %}</div>
+    </div></div>
+    {% if obj.pk != user.pk %}
+    <div class="card mb-3"><div class="card-header">{% if obj.is_active %}Bloquear conta{% else %}Desbloquear conta{% endif %}</div><div class="card-body">
+      <form method="post" action="{% url 'platform:user_block' obj.pk %}" data-confirm="{% if obj.is_active %}Bloquear esta conta? O usuário perderá o acesso imediatamente.{% else %}Desbloquear esta conta?{% endif %}">{% csrf_token %}
+        {% if obj.is_active %}{% for field in block_form %}{% include "partials/field.html" %}{% endfor %}<button class="btn btn-danger">Bloquear</button>
+        {% else %}<button class="btn btn-success">Desbloquear</button>{% endif %}
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+  <div class="col-lg-7">
+    <div class="card mb-3"><div class="card-header">Empresas vinculadas</div><table class="table table-sm mb-0">
+      <thead><tr><th>Empresa</th><th>Perfil</th><th>Plano</th><th>Vínculo</th></tr></thead>
+      <tbody>{% for m in memberships %}<tr><td><a href="{% url 'platform:company_detail' m.company.pk %}">{{ m.company }}</a></td><td class="small">{{ m.get_role_display }}</td><td class="small">{{ m.company.plan|default:"—" }}</td><td class="small">{% if m.is_active %}ativo{% else %}inativo{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary">Sem empresa vinculada.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card mb-3"><div class="card-header">Últimos acessos</div><ul class="list-group list-group-flush small">
+      {% for l in logins %}<li class="list-group-item">{{ l.created_at|date:"d/m/Y H:i" }} · IP {{ l.ip_address|default:"—" }}</li>{% empty %}<li class="list-group-item text-secondary">Nenhum acesso.</li>{% endfor %}</ul></div>
+    <div class="card"><div class="card-header">Auditoria relacionada</div><ul class="list-group list-group-flush small">
+      {% for l in logs %}<li class="list-group-item">{{ l.created_at|date:"d/m/Y H:i" }} · <code>{{ l.action }}</code> · {{ l.target_repr }}</li>{% empty %}<li class="list-group-item text-secondary">Nenhum registro.</li>{% endfor %}</ul></div>
+  </div>
+</div>
+{% endblock %}

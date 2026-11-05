@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block title %}Movimentação de estoque{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Nova movimentação de estoque</h1></div>
+<div class="row g-3">
+  <div class="col-lg-7"><div class="card"><div class="card-body">
+    <form method="post" novalidate>{% csrf_token %}
+      {% include "partials/form_errors.html" %}
+      <div class="row">{% for field in form %}{% include "partials/field.html" with col="col-md-6" %}{% endfor %}</div>
+      <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Registrar</button>
+      <a class="btn btn-light" href="{% url 'inventory:overview' %}">Cancelar</a>
+    </form>
+  </div></div></div>
+  <div class="col-lg-5"><div class="card"><div class="card-body small text-secondary">
+    <p><strong>Toda alteração de saldo gera um registro no histórico</strong> com usuário, data, quantidade e saldo resultante. Não é possível alterar o saldo diretamente.</p>
+    <ul class="mb-0">
+      <li><strong>Entrada</strong>: recebimento avulso (para compras, use o módulo Compras: atualiza custo médio e financeiro).</li>
+      <li><strong>Saída</strong>: uso interno, brinde, amostra. Vendas baixam o estoque automaticamente pelo pedido.</li>
+      <li><strong>Ajuste por contagem</strong>: informe a quantidade contada; o sistema registra a diferença.</li>
+      <li><strong>Perda</strong>: avaria, vencimento, extravio (exige motivo).</li>
+      <li>Saídas não podem consumir unidades reservadas para pedidos em aberto.</li>
+    </ul>
+  </div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Marketing{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Marketing e desempenho</h1><div class="subtitle">Campanhas ativas em {{ period.start|date:"d/m/Y" }} a {{ period.end|date:"d/m/Y" }}</div></div>
+  <div class="d-flex flex-wrap gap-2 align-items-end">{% include "partials/period_filter.html" %}<a class="btn btn-primary btn-sm" href="{% url 'marketing:create' %}"><i class="bi bi-plus-lg me-1"></i>Nova campanha</a></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-2"><div class="card kpi"><div class="label">Investimento</div><div class="value fs-5">{{ totals.investment|brl }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card kpi"><div class="label">Faturamento atribuído</div><div class="value fs-5">{{ totals.revenue|brl }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card kpi"><div class="label">ROAS</div><div class="value fs-5">{% if totals.roas is not None %}{{ totals.roas|num:2 }}×{% else %}—{% endif %}</div><div class="hint">receita ÷ investimento</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card kpi"><div class="label">Conversão</div><div class="value fs-5">{{ totals.conversion|pct:2 }}</div><div class="hint">pedidos ÷ visitantes</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card kpi"><div class="label">CPC</div><div class="value fs-5">{{ totals.cpc|brl }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card kpi"><div class="label">CAC</div><div class="value fs-5">{{ totals.cac|brl }}</div></div></div>
+</div>
+<div class="alert alert-light border small py-2"><strong>ROAS não é lucro nem ROI:</strong> mede quanto de receita cada R$ 1 investido gerou, sem descontar custo dos produtos, impostos e demais despesas. Um ROAS de 3× pode significar prejuízo se a margem de contribuição for menor que 33%.</div>
+{% if campaigns %}
+<div class="card mb-3"><div class="card-header">Investimento × faturamento por campanha</div><div class="card-body"><div class="chart-box"><canvas id="ch-camp"></canvas></div></div></div>
+{% endif %}
+<form method="get" class="filters d-flex gap-2"><input type="hidden" name="period" value="{{ period.key }}">
+  <select name="canal" class="form-select" style="max-width:260px" onchange="this.form.submit()"><option value="">Todos os canais</option>
+    {% for k, l in channels %}<option value="{{ k }}" {% if channel == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Campanha</th><th>Período</th><th class="num">Investimento</th><th class="num">Cliques</th><th class="num">Visitantes</th><th class="num">Pedidos</th><th class="num">Conversão</th><th class="num">CPC</th><th class="num">CAC</th><th class="num">Faturamento</th><th class="num">ROAS</th><th class="num">Ticket</th></tr></thead>
+  <tbody>{% for c in campaigns %}<tr>
+    <td><a class="fw-semibold" href="{% url 'marketing:detail' c.pk %}">{{ c.name }}</a><div class="small text-secondary">{{ c.get_channel_display }}</div></td>
+    <td class="small">{{ c.start_date|date:"d/m/y" }}–{{ c.end_date|date:"d/m/y" }}</td>
+    <td class="num">{{ c.investment|brl }}</td><td class="num">{{ c.clicks }}</td><td class="num">{{ c.visitors }}</td><td class="num">{{ c.orders }}</td>
+    <td class="num">{{ c.conversion_rate|pct:2 }}</td><td class="num">{{ c.cpc|brl }}</td><td class="num">{{ c.cac|brl }}</td>
+    <td class="num">{{ c.attributed_revenue|brl }}</td><td class="num fw-semibold">{% if c.roas is not None %}{{ c.roas|num:2 }}×{% else %}—{% endif %}</td><td class="num">{{ c.average_ticket|brl }}</td>
+  </tr>{% empty %}<tr><td colspan="12"><div class="empty-state"><i class="bi bi-megaphone"></i>Nenhuma campanha no período.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const M = {{ chart|safe }};
+  makeChart("ch-camp", {type: "bar", data: {labels: M.labels, datasets: [{label: "Investimento", data: M.investment, color: "#d93025"}, {label: "Faturamento atribuído", data: M.revenue, color: "#1d4e89"}]}}, {money: true});
+</script>
+{% endblock %}

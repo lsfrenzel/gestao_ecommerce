@@ -1,0 +1,15 @@
+{% load ui %}
+<form method="get" class="d-flex flex-wrap gap-2 align-items-end" id="period-form">
+  {% for key, value in request.GET.items %}{% if key != "period" and key != "start" and key != "end" and key != "page" %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+  <div>
+    <label class="form-label small mb-1">Período</label>
+    <select name="period" class="form-select form-select-sm" onchange="document.getElementById('custom-range').classList.toggle('d-none', this.value !== 'custom'); if (this.value !== 'custom') this.form.submit();">
+      {% for key, label in period_choices %}<option value="{{ key }}" {% if period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div id="custom-range" class="d-flex gap-2 align-items-end {% if period.key != 'custom' %}d-none{% endif %}">
+    <div><label class="form-label small mb-1">De</label><input type="date" name="start" class="form-control form-control-sm" value="{{ period.start|date:'Y-m-d' }}"></div>
+    <div><label class="form-label small mb-1">Até</label><input type="date" name="end" class="form-control form-control-sm" value="{{ period.end|date:'Y-m-d' }}"></div>
+    <button class="btn btn-sm btn-primary">Aplicar</button>
+  </div>
+</form>

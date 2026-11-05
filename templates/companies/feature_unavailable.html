@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}Recurso indisponível{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px"><div class="card-body">
+  <h1 class="h5 text-navy"><i class="bi bi-stars me-1"></i>Recurso não incluído no seu plano</h1>
+  <p class="text-secondary mb-3">O plano atual ({{ current_company.plan|default:"sem plano" }}) não inclui este recurso. Fale com o suporte da plataforma para alterar o plano.</p>
+  <a class="btn btn-primary" href="{% url 'dashboard:home' %}">Voltar ao dashboard</a>
+</div></div>
+{% endblock %}

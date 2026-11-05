@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Pedido #{{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Pedido #{{ order.number }} <span class="badge text-bg-{{ order.status_color }} fs-6 align-middle">{{ order.get_status_display }}</span></h1>
+    <div class="subtitle">{{ order.order_date|date:"d/m/Y" }} · {{ order.get_channel_display }}{% if order.external_reference %} ({{ order.external_reference }}){% endif %} · {{ order.get_payment_method_display }} · estoque: {{ order.get_stock_state_display|lower }}</div></div>
+  {% if order.is_editable %}<a class="btn btn-outline-primary" href="{% url 'sales:edit' order.pk %}"><i class="bi bi-pencil me-1"></i>Editar itens</a>{% endif %}
+</div>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="table-responsive"><table class="table">
+      <thead><tr><th>Produto</th><th class="num">Qtd.</th><th class="num">Preço un.</th><th class="num">Desconto</th><th class="num">Total</th><th class="num">Custo</th></tr></thead>
+      <tbody>{% for i in items %}<tr><td><a href="{% url 'products:detail' i.product.pk %}">{{ i.product.name }}</a><div class="small text-secondary">{{ i.product.sku }}</div></td>
+        <td class="num">{{ i.quantity|qty }}</td><td class="num">{{ i.unit_price|brl }}</td><td class="num">{{ i.discount|brl }}</td><td class="num fw-semibold">{{ i.total|brl }}</td><td class="num text-secondary">{{ i.cost_total|brl }}</td></tr>{% endfor %}</tbody>
+    </table></div></div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><div class="card h-100"><div class="card-header">Valores</div><div class="card-body small">
+        <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ order.subtotal|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(−) Desconto</span><span>{{ order.discount|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(+) Frete cobrado</span><span>{{ order.shipping_charged|brl }}</span></div>
+        <div class="d-flex justify-content-between fw-bold fs-6 border-top pt-1 mt-1"><span>Total</span><span>{{ order.total|brl }}</span></div>
+      </div></div></div>
+      <div class="col-md-6"><div class="card h-100"><div class="card-header">Resultado do pedido</div><div class="card-body small">
+        <div class="d-flex justify-content-between"><span>Faturamento</span><span>{{ order.total|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(−) Custo dos produtos</span><span>{{ order.cogs|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(−) Comissões</span><span>{{ order.commission|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(−) Taxas</span><span>{{ order.fees|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(−) Impostos</span><span>{{ order.taxes|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>(−) Frete pago pela loja</span><span>{{ order.shipping_cost|brl }}</span></div>
+        <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1 {% if order.contribution_margin|neg %}text-negative{% else %}text-positive{% endif %}"><span>Margem de contribuição</span><span>{{ order.contribution_margin|brl }}</span></div>
+        {% if not order.is_revenue %}<div class="text-secondary mt-1">Este pedido não conta como receita ({{ order.get_status_display|lower }}).</div>{% endif %}
+      </div></div></div>
+    </div>
+    <div class="card mb-3"><div class="card-header">Movimentações de estoque</div><div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th class="num">Qtd.</th></tr></thead>
+      <tbody>{% for m in movements %}<tr><td class="small">{{ m.created_at|date:"d/m/Y H:i" }}</td><td>{{ m.product.name }}</td><td class="small">{{ m.get_kind_display }}</td><td class="num">{{ m.quantity|qty }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary text-center py-2 small">Sem movimentações.</td></tr>{% endfor %}</tbody>
+    </table></div></div>
+    <div class="card"><div class="card-header">Lançamentos financeiros</div><div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Descrição</th><th>Tipo</th><th>Situação</th><th class="num">Valor</th></tr></thead>
+      <tbody>{% for e in entries %}<tr><td class="small">{{ e.description }}</td><td class="small">{{ e.get_type_display }}</td><td class="small">{{ e.get_status_display }}</td><td class="num">{{ e.amount|brl }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary text-center py-2 small">A receita é registrada quando o pedido é pago.</td></tr>{% endfor %}</tbody>
+    </table></div></div>
+  </div>
+  <div class="col-lg-4">
+    {% if status_form %}
+    <div class="card mb-3"><div class="card-header">Alterar status</div><div class="card-body">
+      <form method="post" action="{% url 'sales:status' order.pk %}" data-confirm="Confirmar a alteração de status? Estoque e financeiro serão atualizados conforme as regras do pedido.">{% csrf_token %}
+        <div class="mb-2">{{ status_form.status }}</div>
+        <div class="form-check mb-2">{{ status_form.restock }}<label class="form-check-label small" for="{{ status_form.restock.id_for_label }}">{{ status_form.restock.label }}</label></div>
+        <div class="mb-2">{{ status_form.note }}</div>
+        <button class="btn btn-primary w-100">Atualizar</button>
+      </form>
+      <div class="small text-secondary mt-2">Cancelado: libera reservas ou estorna o estoque baixado. Devolvido: devolve ao estoque se marcado. Em pedidos pagos, o estorno ao cliente é lançado no financeiro.</div>
+    </div></div>
+    {% endif %}
+    <div class="card mb-3"><div class="card-header">Cliente</div><div class="card-body small">
+      {% if order.customer %}<a class="fw-semibold" href="{% url 'customers:detail' order.customer.pk %}">{{ order.customer }}</a><div>{{ order.customer.email }}</div><div>{{ order.customer.phone }}</div>{% else %}<span class="text-secondary">Venda sem cliente identificado.</span>{% endif %}
+    </div></div>
+    {% if order.campaign %}<div class="card mb-3"><div class="card-body small">Campanha: <a href="{% url 'marketing:detail' order.campaign.pk %}">{{ order.campaign }}</a></div></div>{% endif %}
+    {% if order.notes %}<div class="card"><div class="card-header">Observações</div><div class="card-body small">{{ order.notes|linebreaksbr }}</div></div>{% endif %}
+    <div class="small text-secondary mt-2">Criado por {{ order.created_by|default:"integração" }} em {{ order.created_at|date:"d/m/Y H:i" }}{% if order.paid_at %} · pago em {{ order.paid_at|date:"d/m/Y H:i" }}{% endif %}</div>
+  </div>
+</div>
+{% endblock %}

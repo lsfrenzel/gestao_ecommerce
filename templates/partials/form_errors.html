@@ -1,0 +1,2 @@
+{% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+{% if form.errors and not form.non_field_errors %}<div class="alert alert-danger py-2">Verifique os campos destacados.</div>{% endif %}

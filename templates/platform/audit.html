@@ -1,0 +1,21 @@
+{% extends "platform/base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Auditoria</h1><div class="subtitle">Registros imutáveis de ações relevantes</div></div></div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <select name="escopo" class="form-select" style="max-width:240px" onchange="this.form.submit()">
+    <option value="plataforma" {% if scope == 'plataforma' %}selected{% endif %}>Ações da plataforma</option>
+    <option value="todos" {% if scope == 'todos' %}selected{% endif %}>Todas as ações</option></select>
+  <input class="form-control" style="max-width:300px" type="search" name="q" value="{{ q }}" placeholder="Ação, alvo, usuário ou empresa">
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-sm table-hover">
+  <thead><tr><th>Data</th><th>Ação</th><th>Alvo</th><th>Empresa</th><th>Usuário</th><th>IP</th><th>Detalhes</th></tr></thead>
+  <tbody>{% for l in page_obj %}<tr>
+    <td class="small text-nowrap">{{ l.created_at|date:"d/m/Y H:i:s" }}</td><td><code>{{ l.action }}</code></td><td class="small">{{ l.target_repr }}</td>
+    <td class="small">{{ l.company|default:"—" }}</td><td class="small">{{ l.actor|default:"sistema" }}</td><td class="small">{{ l.ip_address|default:"" }}</td>
+    <td class="small text-secondary" style="max-width:320px">{% if l.details %}{{ l.details }}{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="7"><div class="empty-state"><i class="bi bi-journal"></i>Nenhum registro.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

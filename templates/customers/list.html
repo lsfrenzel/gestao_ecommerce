@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Clientes{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Clientes</h1><div class="subtitle">{{ page_obj.paginator.count }} cliente(s)</div></div>
+  <a class="btn btn-primary" href="{% url 'customers:create' %}"><i class="bi bi-person-plus me-1"></i>Novo cliente</a></div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <input class="form-control" style="max-width:300px" type="search" name="q" value="{{ q }}" placeholder="Nome, e-mail ou telefone">
+  <select name="ordem" class="form-select" style="max-width:220px" onchange="this.form.submit()">
+    <option value="nome" {% if ordem == 'nome' %}selected{% endif %}>Ordenar por nome</option>
+    <option value="total" {% if ordem == 'total' %}selected{% endif %}>Maior total comprado</option>
+    <option value="recentes" {% if ordem == 'recentes' %}selected{% endif %}>Compra mais recente</option>
+  </select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Cliente</th><th>Contato</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th>Última compra</th></tr></thead>
+  <tbody>{% for c in page_obj %}<tr>
+    <td><a class="fw-semibold" href="{% url 'customers:detail' c.pk %}">{{ c.name }}</a>{% if c.city %}<div class="small text-secondary">{{ c.city }}/{{ c.state }}</div>{% endif %}</td>
+    <td class="small">{{ c.email|default:"" }}<div>{{ c.phone|default:"" }}</div></td>
+    <td class="num">{{ c.order_count }}</td><td class="num fw-semibold">{{ c.total_spent|default:0|brl }}</td><td>{{ c.last_purchase|date:"d/m/Y"|default:"—" }}</td>
+  </tr>{% empty %}<tr><td colspan="5"><div class="empty-state"><i class="bi bi-people"></i>Nenhum cliente encontrado.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

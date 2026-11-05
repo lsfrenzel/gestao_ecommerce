@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block title %}Pedido de venda{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if order %}Editar pedido #{{ order.number }}{% else %}Nova venda{% endif %}</h1></div>
+<form method="post" novalidate>{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card mb-3"><div class="card-header d-flex justify-content-between">Produtos <a href="#" data-formset-add="items"><i class="bi bi-plus"></i> adicionar produto</a></div><div class="card-body">
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}<div class="alert alert-danger py-2">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+        <div class="row g-2 small text-secondary d-none d-md-flex"><div class="col-md-5">Produto</div><div class="col-md-2">Qtd.</div><div class="col-md-2">Preço unit.</div><div class="col-md-2">Desconto</div><div class="col-md-1">Remover</div></div>
+        <div id="items-rows">
+        {% for f in formset %}<div class="row g-2 mb-2">
+          <div class="col-md-5">{{ f.product }}{% for e in f.product.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+          <div class="col-4 col-md-2">{{ f.quantity }}{% for e in f.quantity.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+          <div class="col-4 col-md-2">{{ f.unit_price }}</div><div class="col-4 col-md-2">{{ f.discount }}</div>
+          <div class="col-md-1 d-flex align-items-center"><input type="checkbox" class="form-check-input" name="{{ f.prefix }}-DELETE" {% if f.DELETE.value %}checked{% endif %}></div>
+        </div>{% endfor %}
+        </div>
+        <template id="items-empty"><div class="row g-2 mb-2"><div class="col-md-5">{{ formset.empty_form.product }}</div><div class="col-4 col-md-2">{{ formset.empty_form.quantity }}</div><div class="col-4 col-md-2">{{ formset.empty_form.unit_price }}</div><div class="col-4 col-md-2">{{ formset.empty_form.discount }}</div><div class="col-md-1 d-flex align-items-center"><input type="checkbox" class="form-check-input" name="items-__prefix__-DELETE"></div></div></template>
+        <div class="form-text">Preço unitário vazio = preço de venda cadastrado. O custo do produto é registrado no pedido (cópia histórica).</div>
+      </div></div>
+      <div class="card"><div class="card-header">Valores do pedido</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.discount col="col-md-4" %}
+        {% include "partials/field.html" with field=form.shipping_charged col="col-md-4" %}
+        {% include "partials/field.html" with field=form.shipping_cost col="col-md-4" %}
+        {% include "partials/field.html" with field=form.commission col="col-md-4" %}
+        {% include "partials/field.html" with field=form.fees col="col-md-4" %}
+        {% include "partials/field.html" with field=form.taxes col="col-md-4" %}
+        {% include "partials/field.html" with field=form.auto_taxes %}
+      </div></div></div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card"><div class="card-header">Dados da venda</div><div class="card-body">
+        {% if form.initial_status %}{% include "partials/field.html" with field=form.initial_status %}{% endif %}
+        {% include "partials/field.html" with field=form.order_date %}
+        {% include "partials/field.html" with field=form.customer %}
+        <div class="small mt-n2 mb-3"><a href="{% url 'customers:create' %}" target="_blank">+ cadastrar cliente</a></div>
+        {% include "partials/field.html" with field=form.channel %}
+        {% include "partials/field.html" with field=form.external_reference %}
+        {% include "partials/field.html" with field=form.payment_method %}
+        {% include "partials/field.html" with field=form.campaign %}
+        {% include "partials/field.html" with field=form.notes %}
+        <div class="small text-secondary mb-3">Pendente/aguardando pagamento: o estoque fica <strong>reservado</strong>. Pago: o estoque é <strong>baixado</strong> e a receita registrada no financeiro.</div>
+        <button class="btn btn-primary w-100"><i class="bi bi-check-lg me-1"></i>Salvar pedido</button>
+      </div></div>
+    </div>
+  </div>
+</form>
+{% endblock %}

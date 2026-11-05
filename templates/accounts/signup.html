@@ -1,0 +1,13 @@
+{% extends "accounts/auth_base.html" %}
+{% block title %}Criar conta{% endblock %}
+{% block auth %}
+<h1 class="h3 fw-bold text-navy mb-1">Criar conta</h1>
+<p class="text-secondary mb-4">Em seguida você cadastra a sua empresa.</p>
+<form method="post" novalidate>{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+  <button class="btn btn-primary w-100 py-2">Criar conta</button>
+</form>
+<p class="small text-secondary mt-3">Coletamos apenas nome e e-mail para criar sua conta. Seus dados não são compartilhados com outras empresas da plataforma.</p>
+<p class="text-center mt-3 small">Já tem conta? <a href="{% url 'accounts:login' %}" class="fw-semibold">Entrar</a></p>
+{% endblock %}

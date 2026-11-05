@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Dashboard</h1><div class="subtitle">{{ period.start|date:"d/m/Y" }} a {{ period.end|date:"d/m/Y" }} · indicadores calculados com os dados cadastrados</div></div>
+  {% include "partials/period_filter.html" %}
+</div>
+
+{% if empty %}
+<div class="card mb-3"><div class="card-body d-flex flex-wrap gap-3 align-items-center">
+  <div class="flex-grow-1"><h2 class="h6 mb-1 text-navy">Comece por aqui</h2>
+    <div class="small text-secondary">Cadastre produtos, registre o estoque inicial e lance suas vendas e despesas fixas: os indicadores serão calculados automaticamente.</div></div>
+  <a class="btn btn-primary" href="{% url 'products:create' %}"><i class="bi bi-plus-lg"></i> Cadastrar produto</a>
+  <a class="btn btn-outline-primary" href="{% url 'products:import' %}">Importar CSV</a>
+  <a class="btn btn-outline-primary" href="{% url 'finance:fixed' %}">Despesas fixas</a>
+</div></div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Faturamento" value=kpis.revenue|brl icon="currency-dollar" delta=deltas.revenue tip="Pedidos pagos no período. Pedidos pendentes não entram." %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Vendas (pedidos pagos)" value=kpis.orders icon="bag-check" delta=deltas.orders %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Ticket médio" value=kpis.avg_ticket|brl icon="receipt" delta=deltas.avg_ticket %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Custo dos produtos vendidos" value=kpis.cogs|brl icon="box" hint="CMV ao custo de aquisição" %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Lucro bruto estimado" value=kpis.gross_profit|brl icon="graph-up" hint=kpis.gross_margin_pct|pct|stringformat:"s" %}</div>
+  <div class="col-6 col-xl-3">{% if kpis.contribution_margin < 0 %}{% include "dashboard/_kpi.html" with label="Margem de contribuição" value=kpis.contribution_margin|brl icon="pie-chart" extra_class="negative" delta=deltas.contribution_margin tip="Faturamento − CMV − despesas variáveis" %}{% else %}{% include "dashboard/_kpi.html" with label="Margem de contribuição" value=kpis.contribution_margin|brl icon="pie-chart" delta=deltas.contribution_margin tip="Faturamento − CMV − despesas variáveis" %}{% endif %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Despesas fixas" value=kpis.fixed_expenses|brl icon="building" hint="Lançamentos por competência" %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Despesas variáveis" value=kpis.variable_expenses|brl icon="percent" hint="Impostos, comissões, taxas e fretes" %}</div>
+  <div class="col-6 col-xl-3">{% if kpis.operating_result < 0 %}{% include "dashboard/_kpi.html" with label="Resultado operacional" value=kpis.operating_result|brl icon="clipboard-data" extra_class="negative" delta=deltas.operating_result tip="Margem de contribuição − despesas fixas" %}{% else %}{% include "dashboard/_kpi.html" with label="Resultado operacional" value=kpis.operating_result|brl icon="clipboard-data" extra_class="positive" delta=deltas.operating_result tip="Margem de contribuição − despesas fixas" %}{% endif %}</div>
+  <div class="col-6 col-xl-3">{% include "dashboard/_kpi.html" with label="Margem de contribuição %" value=kpis.contribution_margin_pct|pct icon="percent" hint="sobre o faturamento" %}</div>
+  <div class="col-6 col-xl-3"><a href="{% url 'inventory:overview' %}" class="text-decoration-none">{% include "dashboard/_kpi.html" with label="Valor total do estoque" value=stock.value|brl icon="boxes" hint="ao custo unitário total" %}</a></div>
+  <div class="col-6 col-xl-3"><a href="{% url 'inventory:alerts' %}" class="text-decoration-none">{% if low_stock %}{% include "dashboard/_kpi.html" with label="Estoque baixo / esgotado" value=low_stock icon="exclamation-triangle" extra_class="negative" hint="produtos — ver alertas" %}{% else %}{% include "dashboard/_kpi.html" with label="Estoque baixo / esgotado" value=low_stock icon="exclamation-triangle" hint="produtos" %}{% endif %}</a></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Faturamento por período</div><div class="card-body"><div class="chart-box"><canvas id="ch-revenue"></canvas></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header d-flex justify-content-between">Meta do mês <a class="small" href="{% url 'finance:goals' %}">definir metas</a></div><div class="card-body">
+    {% if goal %}
+      <div class="small text-secondary">Faturamento do mês</div>
+      <div class="fs-4 fw-bold text-navy">{{ goal.revenue|brl }} <span class="fs-6 text-secondary">de {{ goal.goal.revenue_target|brl }}</span></div>
+      <div class="progress my-2" role="progressbar" style="height:10px"><div class="progress-bar {% if goal.pct >= 100 %}bg-success{% endif %}" style="width:{% if goal.pct > 100 %}100{% else %}{{ goal.pct|floatformat:0 }}{% endif %}%"></div></div>
+      <div class="small">{{ goal.pct|pct }} atingido · faltam <strong>{{ goal.remaining|brl }}</strong></div>
+      {% if goal.orders_needed %}<div class="small text-secondary mt-1">≈ {{ goal.orders_needed }} pedido(s) no ticket médio atual</div>{% endif %}
+      <hr><div class="small text-secondary">Resultado operacional do mês</div><div class="fw-semibold {% if goal.result < 0 %}text-negative{% else %}text-positive{% endif %}">{{ goal.result|brl }} <span class="text-secondary fw-normal">(meta {{ goal.goal.profit_target|brl }})</span></div>
+    {% else %}
+      <div class="empty-state py-4"><i class="bi bi-flag"></i>Nenhuma meta definida para este mês.<br><a href="{% url 'finance:goal_new' %}" class="btn btn-sm btn-outline-primary mt-2">Definir meta</a></div>
+    {% endif %}
+  </div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Vendas por produto (faturamento)</div><div class="card-body"><div class="chart-box"><canvas id="ch-by-product"></canvas></div></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Produtos mais vendidos (quantidade)</div><div class="card-body"><div class="chart-box"><canvas id="ch-top-qty"></canvas></div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Receitas × despesas (6 meses)</div><div class="card-body"><div class="chart-box"><canvas id="ch-evolution"></canvas></div></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Evolução da margem de contribuição (%)</div><div class="card-body"><div class="chart-box"><canvas id="ch-cm"></canvas></div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Situação do estoque</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-stock"></canvas></div></div></div></div>
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Metas × resultados (faturamento mensal)</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-goals"></canvas></div></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card h-100">
+    <div class="card-header d-flex justify-content-between">Próximos do ponto de pedido <a class="small" href="{% url 'inventory:reorder' %}">ver todos ({{ near_reorder_count }})</a></div>
+    <div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Produto</th><th class="num">Disponível</th><th class="num">Ponto de pedido</th><th class="num">Sugestão</th></tr></thead>
+      <tbody>{% for r in near_reorder %}<tr><td><a href="{% url 'products:detail' r.product.pk %}">{{ r.product.name }}</a></td><td class="num">{{ r.available|qty }}</td><td class="num">{{ r.reorder_point|qty }}</td><td class="num fw-semibold">{{ r.suggested_qty|qty }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary text-center py-3">Nenhum produto próximo do ponto de pedido.</td></tr>{% endfor %}</tbody>
+    </table></div></div></div>
+  <div class="col-lg-6"><div class="card h-100">
+    <div class="card-header d-flex justify-content-between">Pedidos recentes <a class="small" href="{% url 'sales:list' %}">ver vendas</a></div>
+    <div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th class="num">Total</th></tr></thead>
+      <tbody>{% for o in recent_orders %}<tr><td><a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a> <span class="small text-secondary">{{ o.order_date|date:"d/m" }}</span></td><td>{{ o.customer|default:"—" }}</td><td><span class="badge text-bg-{{ o.status_color }}">{{ o.get_status_display }}</span></td><td class="num">{{ o.total|brl }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary text-center py-3">Nenhuma venda registrada.</td></tr>{% endfor %}</tbody>
+    </table></div></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const D = {{ charts|safe }};
+  makeChart("ch-revenue", {type: "line", data: {labels: D.revenue.labels, datasets: [{label: "Faturamento", data: D.revenue.values, fill: true}]}}, {money: true});
+  makeChart("ch-by-product", {type: "bar", data: {labels: D.by_product.labels, datasets: [{label: "Faturamento", data: D.by_product.values}]}, options: {indexAxis: "y"}}, {money: true});
+  makeChart("ch-top-qty", {type: "bar", data: {labels: D.top_qty.labels, datasets: [{label: "Quantidade", data: D.top_qty.values, color: "#0f9d58"}]}});
+  makeChart("ch-evolution", {type: "bar", data: {labels: D.evolution.labels, datasets: [
+    {label: "Receitas", data: D.evolution.revenue, color: "#1d4e89"}, {label: "Despesas (CMV + variáveis + fixas)", data: D.evolution.expenses, color: "#d93025"},
+    {label: "Resultado operacional", data: D.evolution.result, type: "line", color: "#0f9d58"}]}}, {money: true});
+  makeChart("ch-cm", {type: "line", data: {labels: D.evolution.labels, datasets: [{label: "Margem de contribuição %", data: D.evolution.cm_pct, color: "#7c3aed", fill: true}]}}, {percent: true});
+  makeChart("ch-stock", {type: "doughnut", data: {labels: D.stock.labels, datasets: [{data: D.stock.values, backgroundColor: ["#0f9d58", "#f59e0b", "#d93025", "#7c3aed"]}]}, options: {plugins: {legend: {position: "bottom"}}}});
+  makeChart("ch-goals", {type: "bar", data: {labels: D.evolution.labels, datasets: [
+    {label: "Meta de faturamento", data: D.evolution.goal_revenue, color: "#cbd5e1"}, {label: "Faturamento realizado", data: D.evolution.revenue, color: "#1d4e89"}]}}, {money: true});
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => new bootstrap.Tooltip(el));
+</script>
+{% endblock %}

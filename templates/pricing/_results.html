@@ -1,0 +1,70 @@
+{% load ui %}
+{% if error %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-octagon me-1"></i><strong>Combinação inválida.</strong> {{ error }}</div>
+{% elif form.errors and not result %}
+<div class="alert alert-warning">Corrija os campos destacados para calcular.</div>
+{% for name, errs in form.errors.items %}<div class="small text-danger">{{ errs|join:" " }}</div>{% endfor %}
+{% elif result %}
+<div class="row g-3 mb-3">
+  <div class="col-md-6"><div class="result-highlight h-100"><div class="small opacity-75">Preço sugerido</div><div class="value">{{ result.suggested_price|brl }}</div>
+    <div class="small opacity-75">para margem de contribuição de {{ result.analysis.contribution_margin_pct|pct }}</div></div></div>
+  <div class="col-md-6"><div class="card kpi h-100"><div class="label">Preço mínimo (MC = 0)</div><div class="value">{{ result.minimum_price|brl }}</div><div class="hint">Abaixo dele cada venda gera prejuízo antes das despesas fixas.</div></div></div>
+</div>
+{% for w in result.warnings %}<div class="alert alert-warning py-2 small">{{ w }}</div>{% endfor %}
+<div class="card mb-3"><div class="card-header">Análise do preço sugerido</div><div class="table-responsive"><table class="table table-sm mb-0">
+  <tbody>
+    <tr><td>Custo unitário total</td><td class="num">{{ result.unit_cost|brl }}</td></tr>
+    <tr><td>Despesas percentuais ({{ result.variable_pct|num:2 }}% do preço)</td><td class="num">{{ result.analysis.variable_pct_amount|brl }}</td></tr>
+    <tr><td>Despesas fixas por venda</td><td class="num">{{ result.per_sale_costs|brl }}</td></tr>
+    <tr class="fw-semibold"><td>Despesas totais por venda</td><td class="num">{{ result.analysis.total_variable_expenses|brl }}</td></tr>
+    <tr class="fw-semibold"><td>Margem de contribuição (R$) — resultado estimado por unidade</td><td class="num text-positive">{{ result.analysis.contribution_margin|brl }}</td></tr>
+    <tr><td>Margem de contribuição (%) <span class="text-secondary small">sobre o preço</span></td><td class="num">{{ result.analysis.contribution_margin_pct|pct }}</td></tr>
+    <tr><td>Markup (%) <span class="text-secondary small">(preço − custo) ÷ custo</span></td><td class="num">{{ result.analysis.markup_pct|pct }}</td></tr>
+    <tr><td>Markup multiplicador <span class="text-secondary small">preço ÷ custo</span></td><td class="num">{% if result.analysis.markup_multiplier %}{{ result.analysis.markup_multiplier|num:4 }}×{% else %}—{% endif %}</td></tr>
+    <tr><td>Margem sobre o custo <span class="text-secondary small">MC ÷ custo</span></td><td class="num">{{ result.analysis.margin_on_cost_pct|pct }}</td></tr>
+  </tbody>
+</table></div>
+<div class="card-body pt-2"><div class="formula">Preço sugerido = (custo unitário + despesas fixas por venda) ÷ (1 − % despesas variáveis − % margem desejada). <strong>Markup não é margem:</strong> markup é sobre o custo; margem é sobre o preço.</div></div>
+</div>
+
+<div class="card mb-3"><div class="card-header">Como o preço impacta o resultado</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-price-curve"></canvas></div></div></div>
+
+{% if simulations %}
+<div class="card mb-3"><div class="card-header">Simulador de preços{% if current_price %} <span class="small text-secondary fw-normal">— preço atual {{ current_price|brl }}{% if current_vs_suggested is not None %} ({% if current_vs_suggested|neg %}abaixo{% else %}acima{% endif %} do sugerido em {{ current_vs_suggested|brl }}){% endif %}</span>{% endif %}</div>
+<div class="table-responsive"><table class="table table-sm">
+  <thead><tr><th class="num">Preço</th><th class="num">Despesas</th><th class="num">Contribuição/un.</th><th class="num">MC %</th><th class="num">Markup</th><th class="num">Multiplicador</th>{% if product and current_membership.is_manager_or_admin %}<th></th>{% endif %}</tr></thead>
+  <tbody>{% for a in simulations %}<tr>
+    <td class="num fw-semibold">{{ a.price|brl }}{% if current_price == a.price %} <span class="badge badge-soft">atual</span>{% endif %}</td>
+    <td class="num">{{ a.total_variable_expenses|brl }}</td>
+    <td class="num {% if a.contribution_margin|neg %}text-negative{% else %}text-positive{% endif %}">{{ a.contribution_margin|brl }}</td>
+    <td class="num">{{ a.contribution_margin_pct|pct }}</td><td class="num">{{ a.markup_pct|pct }}</td>
+    <td class="num">{% if a.markup_multiplier %}{{ a.markup_multiplier|num:2 }}×{% else %}—{% endif %}</td>
+    {% if product and current_membership.is_manager_or_admin %}<td class="text-end">
+      <form method="post" action="{% url 'pricing:apply' %}" data-confirm="Aplicar {{ a.price|brl }} como preço de venda de {{ product.name }}?">{% csrf_token %}
+        <input type="hidden" name="product" value="{{ product.pk }}"><input type="hidden" name="price" value="{{ a.price }}"><input type="hidden" name="simulation" value="{{ simulation.pk|default:'' }}">
+        <button class="btn btn-sm btn-outline-primary">Aplicar</button></form></td>{% endif %}
+  </tr>{% endfor %}</tbody>
+</table></div></div>
+{% endif %}
+
+{% if product and current_membership.is_manager_or_admin %}
+<form method="post" action="{% url 'pricing:apply' %}" class="card card-body d-flex flex-row flex-wrap gap-2 align-items-center" data-confirm="Aplicar o preço sugerido ao cadastro do produto?">{% csrf_token %}
+  <input type="hidden" name="product" value="{{ product.pk }}"><input type="hidden" name="price" value="{{ result.suggested_price }}"><input type="hidden" name="simulation" value="{{ simulation.pk|default:'' }}">
+  <div class="flex-grow-1 small">Aplicar o preço sugerido <strong>{{ result.suggested_price|brl }}</strong> ao produto <strong>{{ product.name }}</strong> (registrado no histórico de preços).</div>
+  <button class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Aplicar ao produto</button>
+</form>
+{% endif %}
+<script>
+  (function () {
+    const C = {{ chart|safe }};
+    const prev = Chart.getChart("ch-price-curve"); if (prev) prev.destroy();
+    makeChart("ch-price-curve", {type: "line", data: {labels: C.labels.map((l) => fmtBRL(l)), datasets: [
+      {label: "Contribuição por unidade (R$)", data: C.cm, color: "#1d4e89", fill: true, yAxisID: "y"},
+      {label: "Margem de contribuição (%)", data: C.cm_pct, color: "#0f9d58", yAxisID: "y1"}]},
+      options: {scales: {y: {ticks: {callback: (v) => fmtBRL(v)}, grid: {color: "#eef2f7"}},
+                         y1: {position: "right", grid: {display: false}, ticks: {callback: (v) => fmtNum(v) + "%"}}}}});
+  })();
+</script>
+{% else %}
+<div class="card"><div class="empty-state"><i class="bi bi-calculator"></i>Preencha os custos, despesas e a margem desejada para ver o preço sugerido.</div></div>
+{% endif %}

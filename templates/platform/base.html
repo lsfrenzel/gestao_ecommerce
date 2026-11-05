@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block body_class %}platform{% endblock %}
+{% block body %}
+{% with path=request.path %}
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Menu da plataforma">
+    <a class="brand" href="{% url 'platform:home' %}"><span class="logo" style="background:#ef4444"><i class="bi bi-shield-lock"></i></span>SUPER ADMIN</a>
+    <nav class="nav flex-column">
+      <a class="nav-link {% if path == '/plataforma/' %}active{% endif %}" href="{% url 'platform:home' %}"><i class="bi bi-speedometer2"></i>Visão geral</a>
+      <a class="nav-link {% if '/usuarios/' in path %}active{% endif %}" href="{% url 'platform:users' %}"><i class="bi bi-people"></i>Usuários</a>
+      <a class="nav-link {% if '/empresas/' in path %}active{% endif %}" href="{% url 'platform:companies' %}"><i class="bi bi-buildings"></i>Empresas</a>
+      <a class="nav-link {% if '/planos/' in path %}active{% endif %}" href="{% url 'platform:plans' %}"><i class="bi bi-layers"></i>Planos</a>
+      <a class="nav-link {% if '/auditoria/' in path %}active{% endif %}" href="{% url 'platform:audit' %}"><i class="bi bi-journal-check"></i>Auditoria</a>
+      {% if current_company %}<div class="nav-section">Minha empresa</div><a class="nav-link" href="{% url 'dashboard:home' %}"><i class="bi bi-box-arrow-left"></i>Voltar ao sistema</a>{% endif %}
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-light d-lg-none" data-sidebar-toggle aria-label="Abrir menu"><i class="bi bi-list"></i></button>
+      <span class="company-name">Painel da plataforma</span>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="small text-secondary d-none d-md-inline">{{ user.email }}</span>
+        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="btn btn-light btn-sm"><i class="bi bi-box-arrow-right"></i> Sair</button></form>
+      </div>
+    </header>
+    <main class="content">
+      {% include "partials/messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

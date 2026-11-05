@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ campaign.name }}</h1><div class="subtitle">{{ campaign.get_channel_display }} · {{ campaign.start_date|date:"d/m/Y" }} a {{ campaign.end_date|date:"d/m/Y" }}</div></div>
+  <div class="d-flex gap-2"><a class="btn btn-primary" href="{% url 'marketing:edit' campaign.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>
+    {% if current_membership.is_manager_or_admin %}<a class="btn btn-outline-danger" href="{% url 'marketing:delete' campaign.pk %}"><i class="bi bi-trash"></i></a>{% endif %}</div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Investimento</div><div class="value">{{ campaign.investment|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Faturamento atribuído</div><div class="value">{{ campaign.attributed_revenue|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">ROAS</div><div class="value">{% if campaign.roas is not None %}{{ campaign.roas|num:2 }}×{% else %}—{% endif %}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Ticket médio</div><div class="value">{{ campaign.average_ticket|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Taxa de conversão</div><div class="value">{{ campaign.conversion_rate|pct:2 }}</div><div class="hint">{{ campaign.orders }} pedidos / {{ campaign.visitors }} visitantes</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">CPC</div><div class="value">{{ campaign.cpc|brl }}</div><div class="hint">{{ campaign.clicks }} cliques</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">CAC</div><div class="value">{{ campaign.cac|brl }}</div><div class="hint">{{ campaign.new_customers }} novos clientes</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Pedidos vinculados no sistema</div><div class="value">{{ linked.n|default:0 }}</div><div class="hint">{{ linked.revenue|default:0|brl }} em pedidos pagos com esta campanha</div></div></div>
+</div>
+<div class="formula small mb-3">Conversão = pedidos ÷ visitantes × 100 · CPC = investimento ÷ cliques · CAC = investimento ÷ novos clientes · ROAS = receita atribuída ÷ investimento. Indicadores sem base (divisão por zero) aparecem como “—”.</div>
+<div class="card"><div class="card-header">Pedidos vinculados</div><div class="table-responsive"><table class="table table-sm">
+  <thead><tr><th>Pedido</th><th>Data</th><th>Cliente</th><th class="num">Total</th></tr></thead>
+  <tbody>{% for o in orders %}<tr><td><a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.customer|default:"—" }}</td><td class="num">{{ o.total|brl }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="text-secondary text-center py-3">Nenhum pedido vinculado. Selecione a campanha ao registrar a venda.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

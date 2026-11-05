@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}{{ report.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><a class="small" href="{% url 'reports:index' %}"><i class="bi bi-arrow-left"></i> Relatórios</a><h1>{{ report.title }}</h1><div class="subtitle">{{ report.subtitle }}</div></div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{% qs exportar='csv' %}"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+    {% if pdf_enabled %}<a class="btn btn-outline-primary" href="{% qs exportar='pdf' %}"><i class="bi bi-filetype-pdf me-1"></i>PDF</a>{% endif %}
+  </div>
+</div>
+<form method="get" class="filters d-flex flex-wrap gap-2 align-items-end">
+  {% if definition.uses_period %}
+  <div><label class="form-label small mb-1">Período</label><select name="period" class="form-select form-select-sm" onchange="document.getElementById('cr').classList.toggle('d-none', this.value !== 'custom')">
+    {% for key, label in period_choices %}<option value="{{ key }}" {% if period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div id="cr" class="d-flex gap-2 {% if period.key != 'custom' %}d-none{% endif %}">
+    <div><label class="form-label small mb-1">De</label><input type="date" name="start" class="form-control form-control-sm" value="{{ period.start|date:'Y-m-d' }}"></div>
+    <div><label class="form-label small mb-1">Até</label><input type="date" name="end" class="form-control form-control-sm" value="{{ period.end|date:'Y-m-d' }}"></div></div>
+  {% endif %}
+  {% if definition.uses_product %}<div><label class="form-label small mb-1">Produto</label><select name="produto" class="form-select form-select-sm" style="max-width:240px"><option value="">Todos</option>
+    {% for p in products %}<option value="{{ p.pk }}" {% if product.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>{% endif %}
+  {% if definition.uses_category %}<div><label class="form-label small mb-1">Categoria</label><select name="categoria" class="form-select form-select-sm"><option value="">Todas</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if category.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>{% endif %}
+  {% if definition.uses_channel %}<div><label class="form-label small mb-1">Canal</label><select name="canal" class="form-select form-select-sm"><option value="">Todos</option>
+    {% for k, l in channels %}<option value="{{ k }}" {% if channel == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>{% endif %}
+  <button class="btn btn-sm btn-primary">Aplicar filtros</button>
+</form>
+{% if chart %}<div class="card mb-3"><div class="card-body"><div class="chart-box"><canvas id="ch-report"></canvas></div></div></div>{% endif %}
+<div class="card"><div class="table-responsive"><table class="table table-sm table-hover">
+  <thead><tr>{% for c in report.columns %}<th class="{% if c.fmt != 'text' and c.fmt != 'date' %}num{% endif %}">{{ c.label }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for row in rows %}<tr>{% for text, is_num, negative in row %}<td class="{% if is_num %}num{% endif %} {% if negative %}text-negative{% endif %}">{{ text }}</td>{% endfor %}</tr>
+  {% empty %}<tr><td colspan="{{ report.columns|length }}"><div class="empty-state"><i class="bi bi-inbox"></i>Sem dados para os filtros selecionados.</div></td></tr>{% endfor %}</tbody>
+  {% if totals %}<tfoot><tr class="fw-bold">{% for text, is_num, negative in totals %}<td class="{% if is_num %}num{% endif %}">{{ text }}</td>{% endfor %}</tr></tfoot>{% endif %}
+</table></div></div>
+{% for note in report.notes %}<div class="small text-secondary mt-2"><i class="bi bi-info-circle me-1"></i>{{ note }}</div>{% endfor %}
+{% endblock %}
+{% block scripts %}{% if chart %}
+<script>
+  const R = {{ chart|safe }};
+  const isMoney = !R.datasets.some((d) => /quantidade|produtos/i.test(d.label || ""));
+  const opts = R.indexAxis ? {indexAxis: R.indexAxis} : {};
+  if (R.type === "doughnut") opts.plugins = {legend: {position: "right"}};
+  makeChart("ch-report", {type: R.type, data: {labels: R.labels, datasets: R.datasets}, options: opts}, {money: isMoney});
+</script>
+{% endif %}{% endblock %}

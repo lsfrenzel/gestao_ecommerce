@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}{{ supplier.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ supplier.name }}</h1><div class="subtitle">{{ supplier.cnpj|default:"CNPJ não informado" }}{% if not supplier.is_active %} · inativo{% endif %}</div></div>
+  <div class="d-flex gap-2">
+    {% if "purchasing" in allowed_modules %}<a class="btn btn-outline-primary" href="{% url 'purchasing:order_new' %}?fornecedor={{ supplier.pk }}"><i class="bi bi-cart-plus me-1"></i>Novo pedido de compra</a>{% endif %}
+    <a class="btn btn-primary" href="{% url 'purchasing:supplier_edit' supplier.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Contato</div><div class="card-body small">
+    <div>Contato: {{ supplier.contact_name|default:"—" }}</div><div>Telefone: {{ supplier.phone|default:"—" }}</div><div>E-mail: {{ supplier.email|default:"—" }}</div>
+    <div>Endereço: {{ supplier.address|default:"—" }}</div><div>Prazo padrão: {{ supplier.default_lead_time_days }} dias</div>
+    {% if supplier.notes %}<p class="mt-2 mb-0 text-secondary">{{ supplier.notes|linebreaksbr }}</p>{% endif %}
+  </div></div></div>
+  <div class="col-lg-4"><div class="card kpi h-100"><div class="label">Total comprado (recebido)</div><div class="value">{{ total_purchased|brl }}</div><div class="hint">{{ orders|length }} pedido(s) no histórico</div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Produtos deste fornecedor</div><ul class="list-group list-group-flush small">
+    {% for p in products %}<li class="list-group-item"><a href="{% url 'products:detail' p.pk %}">{{ p.name }}</a></li>{% empty %}<li class="list-group-item text-secondary">Nenhum produto vinculado.</li>{% endfor %}</ul></div></div>
+</div>
+<div class="card"><div class="card-header">Histórico de compras</div><div class="table-responsive"><table class="table table-sm table-hover">
+  <thead><tr><th>Pedido</th><th>Data</th><th>Previsão</th><th>Status</th><th class="num">Total</th></tr></thead>
+  <tbody>{% for o in orders %}<tr><td><a href="{% url 'purchasing:order_detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.expected_date|date:"d/m/Y"|default:"—" }}</td><td>{{ o.get_status_display }}</td><td class="num">{{ o.total|brl }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary text-center py-3">Nenhuma compra registrada.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

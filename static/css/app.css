@@ -1,0 +1,137 @@
+/* Gestão SaaS — identidade visual: azul-marinho institucional, fundo claro, cards discretos. */
+:root {
+  --navy: #0b2545;
+  --navy-2: #13315c;
+  --navy-3: #1d4e89;
+  --accent: #2563eb;
+  --positive: #0f9d58;
+  --negative: #d93025;
+  --warning: #f59e0b;
+  --muted: #64748b;
+  --border: #e3e8ef;
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --sidebar-w: 248px;
+  --bs-primary: #1d4e89;
+  --bs-primary-rgb: 29, 78, 137;
+  --bs-body-font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bs-body-color: #1e293b;
+  --bs-border-color: var(--border);
+}
+
+body { background: var(--bg); font-size: .925rem; }
+a { color: var(--navy-3); }
+.btn-primary { --bs-btn-bg: var(--navy-3); --bs-btn-border-color: var(--navy-3); --bs-btn-hover-bg: var(--navy-2);
+  --bs-btn-hover-border-color: var(--navy-2); --bs-btn-active-bg: var(--navy); }
+.btn-outline-primary { --bs-btn-color: var(--navy-3); --bs-btn-border-color: var(--navy-3);
+  --bs-btn-hover-bg: var(--navy-3); --bs-btn-hover-border-color: var(--navy-3); }
+.text-navy { color: var(--navy) !important; }
+.bg-navy { background: var(--navy) !important; }
+.text-positive { color: var(--positive) !important; }
+.text-negative { color: var(--negative) !important; }
+
+/* ---------- Layout ---------- */
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar {
+  width: var(--sidebar-w); background: var(--navy); color: #cbd5e1; position: fixed; inset: 0 auto 0 0;
+  display: flex; flex-direction: column; z-index: 1040; transition: transform .2s ease;
+}
+.sidebar .brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.25rem; color: #fff;
+  font-weight: 700; font-size: 1.05rem; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.08); }
+.sidebar .brand .logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#3b82f6,#0f9d58);
+  display: grid; place-items: center; color: #fff; }
+.sidebar nav { overflow-y: auto; overflow-x: hidden; padding: .75rem .6rem 1rem; flex: 1 1 0; min-height: 0;
+  flex-wrap: nowrap; }
+.sidebar .nav-section { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: #7d8fa9;
+  padding: .9rem .75rem .35rem; }
+.sidebar .nav-link { color: #cbd5e1; border-radius: 8px; padding: .5rem .75rem; display: flex; align-items: center;
+  gap: .7rem; font-weight: 500; }
+.sidebar .nav-link i { font-size: 1.05rem; width: 1.2rem; text-align: center; }
+.sidebar .nav-link:hover { background: rgba(255,255,255,.07); color: #fff; }
+.sidebar .nav-link.active { background: var(--navy-3); color: #fff; }
+.sidebar .badge-alert { margin-left: auto; background: var(--negative); font-size: .65rem; }
+.main { flex: 1; margin-left: var(--sidebar-w); min-width: 0; display: flex; flex-direction: column; }
+.topbar { background: #fff; border-bottom: 1px solid var(--border); height: 62px; display: flex; align-items: center;
+  gap: .75rem; padding: 0 1.25rem; position: sticky; top: 0; z-index: 1030; }
+.topbar .company-name { font-weight: 700; color: var(--navy); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 260px; }
+.topbar .search { max-width: 420px; flex: 1; position: relative; }
+.topbar .search input { background: var(--bg); border-color: transparent; padding-left: 2.2rem; }
+.topbar .search i { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search-results { position: absolute; top: 110%; left: 0; right: 0; background: #fff; border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(15,23,42,.12); max-height: 420px; overflow-y: auto; z-index: 1050; }
+.search-results:empty { display: none; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--navy-3); color: #fff; display: grid;
+  place-items: center; font-weight: 600; font-size: .8rem; }
+.content { padding: 1.5rem; flex: 1; }
+.page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem;
+  margin-bottom: 1.25rem; }
+.page-header h1 { font-size: 1.4rem; font-weight: 700; color: var(--navy); margin: 0; }
+.page-header .subtitle { color: var(--muted); font-size: .875rem; margin-top: .15rem; }
+
+@media (max-width: 991.98px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; box-shadow: 0 0 0 100vmax rgba(15,23,42,.45); }
+  .main { margin-left: 0; }
+  .topbar .company-name { max-width: 140px; }
+  .content { padding: 1rem; }
+}
+
+/* ---------- Cards e KPIs ---------- */
+.card { border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.card-header { background: transparent; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--navy);
+  padding: .85rem 1.1rem; }
+.kpi { padding: 1rem 1.1rem; height: 100%; }
+.kpi .label { color: var(--muted); font-size: .78rem; font-weight: 500; display: flex; align-items: center; gap: .4rem; }
+.kpi .value { font-size: 1.45rem; font-weight: 700; color: var(--navy); margin-top: .2rem; line-height: 1.2;
+  word-break: break-word; }
+.kpi .hint { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+.kpi .icon { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; float: right;
+  background: #eef3fb; color: var(--navy-3); }
+.kpi.negative .value { color: var(--negative); }
+.kpi.positive .value { color: var(--positive); }
+.delta-up { color: var(--positive); font-weight: 600; }
+.delta-down { color: var(--negative); font-weight: 600; }
+.chart-box { position: relative; height: 280px; }
+.chart-box.sm { height: 220px; }
+
+/* ---------- Tabelas ---------- */
+.table { --bs-table-bg: transparent; margin-bottom: 0; }
+.table thead th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+  font-weight: 600; border-bottom-width: 1px; white-space: nowrap; background: #f8fafc; }
+.table td { vertical-align: middle; }
+.table-hover tbody tr:hover { background: #f8fbff; }
+.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.badge-soft { background: #eef3fb; color: var(--navy-3); font-weight: 600; }
+.status-ok { background: #e7f6ee; color: #137a43; }
+.status-low { background: #fff4e0; color: #a35b00; }
+.status-out { background: #fde8e7; color: #b42318; }
+.status-excess { background: #eef2ff; color: #3730a3; }
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty-state i { font-size: 2.4rem; color: #b6c2d3; display: block; margin-bottom: .6rem; }
+
+/* ---------- Formulários ---------- */
+.form-label { font-weight: 500; font-size: .85rem; color: #334155; }
+.form-text { font-size: .76rem; }
+.formula { background: #f1f5fb; border-left: 3px solid var(--navy-3); padding: .6rem .85rem; border-radius: 6px;
+  font-size: .82rem; color: #334155; }
+.result-highlight { background: linear-gradient(135deg, var(--navy), var(--navy-3)); color: #fff; border-radius: 12px;
+  padding: 1.1rem 1.25rem; }
+.result-highlight .value { font-size: 1.8rem; font-weight: 700; }
+.filters { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: .75rem; margin-bottom: 1rem; }
+.checkbox-grid ul, .checkbox-grid > div { list-style: none; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .35rem .75rem; }
+
+/* ---------- Autenticação ---------- */
+.auth-wrap { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
+.auth-side { background: linear-gradient(150deg, var(--navy) 0%, var(--navy-3) 100%); color: #e2e8f0; padding: 3rem;
+  display: flex; flex-direction: column; justify-content: center; }
+.auth-side h2 { color: #fff; font-weight: 700; }
+.auth-form { display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; background: #fff; }
+.auth-form .box { width: 100%; max-width: 420px; }
+@media (max-width: 991.98px) { .auth-wrap { grid-template-columns: 1fr; } .auth-side { display: none; } }
+
+.platform .sidebar { background: #111827; }
+.platform .sidebar .nav-link.active { background: #374151; }
+.htmx-indicator { opacity: 0; transition: opacity .2s; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }

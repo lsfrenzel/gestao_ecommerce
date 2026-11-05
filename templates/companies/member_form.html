@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block title %}Permissões{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Permissões de {{ membership.user.full_name }}</h1><div class="subtitle">{{ membership.user.email }}</div></div></div>
+<div class="card" style="max-width:760px"><div class="card-body">
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form_errors.html" %}
+    <div class="row">{% for field in form %}{% include "partials/field.html" %}{% endfor %}</div>
+    <button class="btn btn-primary">Salvar</button> <a class="btn btn-light" href="{% url 'companies:team' %}">Cancelar</a>
+  </form>
+</div></div>
+{% endblock %}

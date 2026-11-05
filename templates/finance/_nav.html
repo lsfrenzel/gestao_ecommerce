@@ -1,0 +1,8 @@
+<ul class="nav nav-pills mb-3 gap-1 flex-wrap">
+  <li class="nav-item"><a class="nav-link {% if active == 'overview' %}active{% endif %}" href="{% url 'finance:overview' %}">Visão geral</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'pagar' %}active{% endif %}" href="{% url 'finance:entries' 'pagar' %}">Contas a pagar</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'receber' %}active{% endif %}" href="{% url 'finance:entries' 'receber' %}">Contas a receber</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'fixed' %}active{% endif %}" href="{% url 'finance:fixed' %}">Despesas fixas</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'categories' %}active{% endif %}" href="{% url 'finance:categories' %}">Categorias</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'goals' %}active{% endif %}" href="{% url 'finance:goals' %}">Metas</a></li>
+</ul>

@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block title %}Relatórios{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Central de relatórios</h1><div class="subtitle">Filtros por período, produto, categoria e canal · exportação em CSV e PDF</div></div></div>
+{% for group, reports in groups.items %}
+<h2 class="h6 text-uppercase text-secondary mt-3 mb-2">{{ group }}</h2>
+<div class="row g-3">
+  {% for r in reports %}<div class="col-md-6 col-xl-4"><a class="card card-body h-100 text-decoration-none" href="{% url 'reports:report' r.slug %}">
+    <div class="fw-semibold text-navy"><i class="bi bi-file-earmark-bar-graph me-1"></i>{{ r.title }}</div><div class="small text-secondary mt-1">{{ r.description }}</div></a></div>{% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

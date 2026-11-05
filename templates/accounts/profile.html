@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block title %}Meu perfil{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Meu perfil</h1><a class="btn btn-outline-primary" href="{% url 'accounts:password_change' %}"><i class="bi bi-key me-1"></i>Alterar senha</a></div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card"><div class="card-header">Dados pessoais</div><div class="card-body">
+    <form method="post" novalidate>{% csrf_token %}
+      <div class="mb-3"><label class="form-label">E-mail</label><input class="form-control" value="{{ user.email }}" disabled></div>
+      {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+      <button class="btn btn-primary">Salvar</button>
+    </form>
+  </div></div></div>
+  <div class="col-lg-6"><div class="card"><div class="card-header">Empresas vinculadas</div>
+    <ul class="list-group list-group-flush">
+      {% for m in memberships %}<li class="list-group-item d-flex justify-content-between"><span>{{ m.company }}</span><span class="badge badge-soft">{{ m.get_role_display }}</span></li>
+      {% empty %}<li class="list-group-item text-secondary">Nenhuma empresa. <a href="{% url 'companies:onboarding' %}">Cadastrar empresa</a></li>{% endfor %}
+    </ul>
+    <div class="card-body small text-secondary">Último acesso: {{ user.last_login|date:"d/m/Y H:i"|default:"—" }} · Cadastro: {{ user.date_joined|date:"d/m/Y" }}</div>
+  </div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Estoque{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Estoque</h1><div class="subtitle">Saldo físico, reservas de pedidos e disponível</div></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% qs exportar='csv' page='' %}"><i class="bi bi-download me-1"></i>CSV</a>
+    {% if current_company.multi_warehouse_enabled %}<a class="btn btn-outline-primary" href="{% url 'inventory:transfer' %}"><i class="bi bi-arrow-left-right me-1"></i>Transferir</a>{% endif %}
+    <a class="btn btn-primary" href="{% url 'inventory:move' %}"><i class="bi bi-plus-slash-minus me-1"></i>Nova movimentação</a>
+  </div>
+</div>
+{% include "inventory/_nav.html" with active="overview" %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Valor do estoque (custo)</div><div class="value">{{ total_value|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Unidades em estoque</div><div class="value">{{ total_units|qty }}</div><div class="hint">{{ total_reserved|qty }} reservadas</div></div></div>
+  <div class="col-6 col-lg-3"><a class="text-decoration-none" href="?status=low"><div class="card kpi"><div class="label">Estoque baixo</div><div class="value text-warning">{{ counts.low|default:0 }}</div></div></a></div>
+  <div class="col-6 col-lg-3"><a class="text-decoration-none" href="?status=out"><div class="card kpi negative"><div class="label">Esgotados</div><div class="value">{{ counts.out|default:0 }}</div></div></a></div>
+</div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <input class="form-control" style="max-width:280px" type="search" name="q" value="{{ q }}" placeholder="Nome ou SKU">
+  <select name="categoria" class="form-select" style="max-width:200px" onchange="this.form.submit()"><option value="">Todas as categorias</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if category == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+  <select name="status" class="form-select" style="max-width:180px" onchange="this.form.submit()"><option value="">Todas as situações</option>
+    <option value="ok" {% if status == 'ok' %}selected{% endif %}>Normal</option><option value="low" {% if status == 'low' %}selected{% endif %}>Estoque baixo</option>
+    <option value="out" {% if status == 'out' %}selected{% endif %}>Esgotado</option><option value="excess" {% if status == 'excess' %}selected{% endif %}>Excesso</option></select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Produto</th><th class="num">Saldo</th><th class="num">Reservado</th><th class="num">Disponível</th><th class="num">Mín./Máx.</th><th class="num">Custo un.</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
+  <tbody>{% for p in page_obj %}<tr>
+    <td><a class="fw-semibold" href="{% url 'products:detail' p.pk %}">{{ p.name }}</a><div class="small text-secondary">{{ p.sku }}{% if balances %}{% for b in balances|get_item:p.pk %} · {{ b.warehouse }}: {{ b.on_hand|qty }}{% endfor %}{% endif %}</div></td>
+    <td class="num">{{ p.stock_on_hand|qty }}</td><td class="num">{{ p.stock_reserved|qty }}</td><td class="num fw-semibold">{{ p.available_stock|qty }}</td>
+    <td class="num small">{{ p.min_stock|qty }} / {{ p.max_stock|qty }}</td><td class="num">{{ p.total_unit_cost|brl }}</td><td class="num">{{ p.stock_value|brl }}</td>
+    <td><span class="badge status-{{ p.stock_status }}">{{ p.stock_status_label }}</span></td>
+    <td class="text-end"><a class="btn btn-sm btn-light" href="{% url 'inventory:move' %}?produto={{ p.pk }}" title="Movimentar"><i class="bi bi-plus-slash-minus"></i></a></td>
+  </tr>{% empty %}<tr><td colspan="9"><div class="empty-state"><i class="bi bi-boxes"></i>Nenhum produto encontrado.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

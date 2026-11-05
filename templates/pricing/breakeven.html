@@ -1,0 +1,112 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Ponto de equilíbrio{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Ponto de equilíbrio</h1><div class="subtitle">Quanto vender para cobrir todas as despesas fixas</div></div>
+  <a class="btn btn-outline-primary" href="{% url 'finance:fixed' %}"><i class="bi bi-building me-1"></i>Despesas fixas ({{ fixed_default|brl }}/mês)</a>
+</div>
+<div class="alert alert-info small py-2"><i class="bi bi-info-circle me-1"></i>O ponto de equilíbrio depende das premissas informadas — preços, custos, despesas variáveis e, no cenário com vários produtos, do <strong>mix de vendas</strong>. Se o mix mudar, o resultado muda.</div>
+<div class="row g-3">
+  <div class="col-xl-5">
+    <form method="post" novalidate>{% csrf_token %}
+      {% include "partials/form_errors.html" %}
+      <div class="card mb-3"><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.mode %}
+        {% include "partials/field.html" with field=form.fixed_costs col="col-md-6" %}
+        {% include "partials/field.html" with field=form.current_revenue col="col-md-6" %}
+        {% include "partials/field.html" with field=form.variable_pct col="col-md-6" %}
+        {% include "partials/field.html" with field=form.per_unit_costs col="col-md-6" %}
+      </div></div></div>
+      <div class="card mb-3" id="single-box"><div class="card-header">Produto individual</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.product %}
+        {% include "partials/field.html" with field=form.manual_price col="col-md-6" %}
+        {% include "partials/field.html" with field=form.manual_unit_cost col="col-md-6" %}
+      </div></div></div>
+      <div class="card mb-3" id="mix-box"><div class="card-header d-flex justify-content-between align-items-center">Mix de produtos
+          <a class="small" href="?modo=mix&mix=vendas">usar mix das vendas (90 dias)</a></div>
+        <div class="card-body">
+          {{ formset.management_form }}
+          {% if formset.non_form_errors %}<div class="alert alert-danger py-2">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+          <div id="mix-rows">
+          {% for f in formset %}<div class="row g-2 mb-2">
+            <div class="col-6">{{ f.product }}</div><div class="col-3">{{ f.price }}</div><div class="col-3">{{ f.share_pct }}</div>
+          </div>{% endfor %}
+          </div>
+          <template id="mix-empty"><div class="row g-2 mb-2"><div class="col-6">{{ formset.empty_form.product }}</div><div class="col-3">{{ formset.empty_form.price }}</div><div class="col-3">{{ formset.empty_form.share_pct }}</div></div></template>
+          <div class="d-flex justify-content-between small text-secondary"><span>Produto · preço (opcional) · participação % nas unidades vendidas</span>
+            <a href="#" data-formset-add="mix"><i class="bi bi-plus"></i> linha</a></div>
+          {% if mix_from_sales %}<div class="small text-positive mt-1">Mix preenchido com as vendas pagas dos últimos 90 dias.</div>{% endif %}
+        </div></div>
+      <div class="card mb-3"><div class="card-header">Simulações</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.target_profit col="col-md-4" %}
+        {% include "partials/field.html" with field=form.fixed_increase_pct col="col-md-4" %}
+        {% include "partials/field.html" with field=form.cm_improvement_pp col="col-md-4" %}
+      </div></div></div>
+      <button class="btn btn-primary"><i class="bi bi-calculator me-1"></i>Calcular</button>
+    </form>
+  </div>
+  <div class="col-xl-7">
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    {% if result %}
+      {% for w in result.warnings %}<div class="alert alert-warning py-2 small">{{ w }}</div>{% endfor %}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="result-highlight h-100"><div class="small opacity-75">Ponto de equilíbrio em faturamento</div><div class="value">{{ result.breakeven_revenue|brl }}</div><div class="small opacity-75">por mês</div></div></div>
+        <div class="col-md-6"><div class="card kpi h-100"><div class="label">Ponto de equilíbrio em unidades</div><div class="value">{% if result.breakeven_units is not None %}{{ result.breakeven_units|qty }}{% else %}—{% endif %}</div><div class="hint">unidades por mês (arredondado para cima)</div></div></div>
+        <div class="col-6 col-md-3"><div class="card kpi"><div class="label">MC unitária média</div><div class="value fs-5">{{ result.unit_cm|brl }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="card kpi"><div class="label">Índice de MC</div><div class="value fs-5">{{ result.cm_ratio_pct|pct }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="card kpi {% if result.current_result|neg %}negative{% else %}positive{% endif %}"><div class="label">Resultado atual</div><div class="value fs-5">{{ result.current_result|brl }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="card kpi"><div class="label">Margem de segurança</div><div class="value fs-5">{{ result.safety_margin_pct|pct }}</div></div></div>
+      </div>
+      <div class="card mb-3"><div class="card-header">Custo-volume-lucro</div><div class="card-body"><div class="chart-box"><canvas id="ch-be"></canvas></div>
+        <div class="small text-secondary mt-2">À esquerda do ponto de equilíbrio: região de prejuízo (custo total acima da receita). À direita: resultado positivo.</div></div></div>
+      {% if result.items|length > 1 %}
+      <div class="card mb-3"><div class="card-header">Mix e unidades necessárias por produto</div><div class="table-responsive"><table class="table table-sm">
+        <thead><tr><th>Produto</th><th class="num">Preço</th><th class="num">Custo variável</th><th class="num">MC un.</th><th class="num">MC %</th><th class="num">Mix</th><th class="num">Unidades no PE</th></tr></thead>
+        <tbody>{% for i in result.items %}<tr><td>{{ i.name }}</td><td class="num">{{ i.price|brl }}</td><td class="num">{{ i.variable_cost|brl }}</td><td class="num {% if i.unit_cm|neg %}text-negative{% endif %}">{{ i.unit_cm|brl }}</td><td class="num">{{ i.cm_ratio_pct|pct }}</td><td class="num">{{ i.share_pct|pct }}</td><td class="num">{{ i.units|qty }}</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+      {% endif %}
+      <div class="card"><div class="card-header">Cenários</div><div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6"><h3 class="h6">Se as vendas aumentarem…</h3>
+            {% for s in scenarios.sales %}<div class="d-flex justify-content-between small border-bottom py-1"><span>+{{ s.increase_pct|num:0 }}% → {{ s.revenue|brl }}</span><strong class="{% if s.result|neg %}text-negative{% else %}text-positive{% endif %}">{{ s.result|brl }}</strong></div>
+            {% empty %}<div class="small text-secondary">Informe o faturamento atual para simular.</div>{% endfor %}</div>
+          <div class="col-md-6">
+            {% if target %}<h3 class="h6">Meta de resultado de {{ target.profit|brl }}</h3>
+              <div class="small">Vender <strong>{% if target.units is not None %}{{ target.units|qty }} unidades{% else %}—{% endif %}</strong> ou faturar <strong>{{ target.revenue|brl }}</strong> por mês.</div>{% endif %}
+            {% if scenarios.fixed %}<h3 class="h6 mt-3">Despesas fixas +{{ scenarios.fixed.increase_pct|num:0 }}%</h3>
+              <div class="small">Fixas {{ scenarios.fixed.fixed_costs|brl }} → novo PE <strong>{{ scenarios.fixed.breakeven_revenue|brl }}</strong> ({{ scenarios.fixed.breakeven_units|qty }} un.)</div>{% endif %}
+            {% if scenarios.cm %}<h3 class="h6 mt-3">Margem de contribuição {{ scenarios.cm.improvement_pp|num:1 }} p.p.</h3>
+              <div class="small">Índice {{ scenarios.cm.cm_ratio_pct|pct }} → novo PE <strong>{{ scenarios.cm.breakeven_revenue|brl }}</strong> ({{ scenarios.cm.breakeven_units|qty }} un.)</div>{% endif %}
+          </div>
+        </div>
+        <div class="formula mt-3">PE (R$) = despesas fixas ÷ índice de margem de contribuição · PE (un.) = despesas fixas ÷ margem de contribuição unitária</div>
+      </div></div>
+    {% elif not error %}
+      <div class="card"><div class="empty-state"><i class="bi bi-bullseye"></i>Informe as despesas fixas e o produto (ou o mix) e clique em calcular.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    const mode = document.getElementById("id_mode");
+    function sync() { const mix = mode.value === "mix";
+      document.getElementById("mix-box").classList.toggle("d-none", !mix); document.getElementById("single-box").classList.toggle("d-none", mix); }
+    mode.addEventListener("change", sync); sync();
+    document.querySelectorAll("#mix-box select, #mix-box input").forEach((el) => el.classList.add(el.tagName === "SELECT" ? "form-select" : "form-control"));
+    document.addEventListener("click", (e) => { if (e.target.closest("[data-formset-add]")) setTimeout(() => document.querySelectorAll("#mix-box select, #mix-box input").forEach((el) => el.classList.add(el.tagName === "SELECT" ? "form-select" : "form-control")), 0); });
+    {% if chart %}
+    const C = {{ chart|safe }};
+    if (C.labels) {
+      const be = Number(C.breakeven);
+      makeChart("ch-be", {type: "line", data: {labels: C.labels.map((l) => fmtBRL(l)), datasets: [
+        {label: "Receita", data: C.revenue, color: "#0f9d58"},
+        {label: "Custo total (fixo + variável)", data: C.cost, color: "#d93025"}]},
+        options: {plugins: {title: {display: true, text: "Ponto de equilíbrio: " + fmtBRL(be) + (C.current ? " · faturamento atual: " + fmtBRL(C.current) : "")}}}}, {money: true});
+    }
+    {% endif %}
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}{{ customer.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ customer.name }}</h1><div class="subtitle">Cliente desde {{ customer.created_at|date:"d/m/Y" }}{% if customer.anonymized_at %} · <span class="text-danger">anonimizado em {{ customer.anonymized_at|date:"d/m/Y" }}</span>{% endif %}</div></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'sales:create' %}"><i class="bi bi-bag-plus me-1"></i>Nova venda</a>
+    {% if not customer.anonymized_at %}<a class="btn btn-primary" href="{% url 'customers:edit' customer.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>{% endif %}
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Total comprado</div><div class="value">{{ summary.total|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Pedidos pagos</div><div class="value">{{ summary.count }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Ticket médio</div><div class="value">{{ avg_ticket|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Última compra</div><div class="value fs-5">{{ summary.last|date:"d/m/Y"|default:"—" }}</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header">Dados</div><div class="card-body small">
+      <div>E-mail: {{ customer.email|default:"—" }}</div><div>Telefone: {{ customer.phone|default:"—" }}</div>
+      <div>CPF/CNPJ: {{ customer.masked_document|default:"—" }}</div>
+      <div>Endereço: {{ customer.address|default:"—" }} {% if customer.city %}— {{ customer.city }}/{{ customer.state }}{% endif %}</div>
+      <div>Marketing: {% if customer.marketing_consent %}autorizado{% else %}não autorizado{% endif %}</div>
+      {% if customer.notes %}<p class="mt-2 mb-0 text-secondary">{{ customer.notes|linebreaksbr }}</p>{% endif %}
+    </div></div>
+    {% if current_membership.is_manager_or_admin %}
+    <div class="card"><div class="card-header">LGPD — direitos do titular</div><div class="card-body small">
+      <p class="text-secondary">Atenda solicitações de acesso/portabilidade e eliminação. Toda ação é registrada na auditoria.</p>
+      <a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'customers:export' customer.pk %}"><i class="bi bi-filetype-json me-1"></i>Exportar dados (JSON)</a>
+      {% if current_membership.is_admin and not customer.anonymized_at %}
+      <form method="post" action="{% url 'customers:anonymize' customer.pk %}" data-confirm="Anonimizar este cliente? Os dados pessoais serão removidos de forma irreversível; os pedidos serão mantidos sem identificação.">{% csrf_token %}
+        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-eraser me-1"></i>Anonimizar (eliminação)</button></form>{% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+  <div class="col-lg-8"><div class="card"><div class="card-header">Histórico de pedidos</div><div class="table-responsive"><table class="table table-hover table-sm">
+    <thead><tr><th>Pedido</th><th>Data</th><th>Canal</th><th>Status</th><th class="num">Total</th></tr></thead>
+    <tbody>{% for o in orders %}<tr><td><a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.order_date|date:"d/m/Y" }}</td><td class="small">{{ o.get_channel_display }}</td><td><span class="badge text-bg-{{ o.status_color }}">{{ o.get_status_display }}</span></td><td class="num">{{ o.total|brl }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="text-secondary text-center py-3">Nenhum pedido.</td></tr>{% endfor %}</tbody>
+  </table></div></div></div>
+</div>
+{% endblock %}

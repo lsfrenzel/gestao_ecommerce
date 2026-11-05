@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Ponto de pedido{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Ponto de pedido</h1><div class="subtitle">Quando e quanto comprar · consumo médio dos últimos {{ window }} dias (ou ajuste manual)</div></div>
+  <a class="btn btn-outline-primary" href="{% qs exportar='csv' %}"><i class="bi bi-download me-1"></i>CSV</a>
+</div>
+{% include "inventory/_nav.html" with active="reorder" %}
+<div class="formula mb-3">Ponto de pedido = consumo médio diário × prazo de reposição + estoque de segurança. Quando disponível + a caminho ≤ ponto de pedido, é hora de comprar.</div>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {% if show == 'repor' %}active{% endif %}" href="?mostrar=repor">Precisam de reposição <span class="badge text-bg-danger">{{ count_reorder }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if show == 'proximos' %}active{% endif %}" href="?mostrar=proximos">Próximos <span class="badge text-bg-warning">{{ count_near }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if show == 'todos' %}active{% endif %}" href="?mostrar=todos">Todos</a></li>
+</ul>
+<form method="post" action="{% url 'inventory:reorder_purchases' %}" data-confirm="Gerar pedidos de compra em rascunho (um por fornecedor) para os produtos selecionados?">{% csrf_token %}
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th><input type="checkbox" class="form-check-input" onclick="document.querySelectorAll('.sel').forEach(c=>c.checked=this.checked)"></th><th>Produto</th><th class="num">Consumo/dia</th><th class="num">Prazo</th><th class="num">Est. segurança</th><th class="num">Disponível</th><th class="num">A caminho</th><th class="num">Ponto de pedido</th><th class="num">Cobertura</th><th class="num">Sugestão</th><th></th></tr></thead>
+  <tbody>{% for r in rows %}<tr class="{% if r.needs_reorder %}table-danger-subtle{% endif %}">
+    <td>{% if r.suggested_qty > 0 %}<input type="checkbox" class="form-check-input sel" name="products" value="{{ r.product.pk }}" {% if r.needs_reorder %}checked{% endif %}>{% endif %}</td>
+    <td><a class="fw-semibold" href="{% url 'products:detail' r.product.pk %}">{{ r.product.name }}</a><div class="small text-secondary">{{ r.product.sku }} · {{ r.product.supplier|default:"sem fornecedor" }}</div></td>
+    <td class="num">{{ r.daily_consumption|num:2 }}<div class="small text-secondary">{{ r.consumption_source }}</div></td>
+    <td class="num">{{ r.lead_time_days }} d</td><td class="num">{{ r.safety_stock|qty }}</td><td class="num">{{ r.available|qty }}</td><td class="num">{{ r.incoming|qty }}</td>
+    <td class="num fw-semibold">{{ r.reorder_point|qty }}</td>
+    <td class="num">{% if r.days_of_cover is not None %}{{ r.days_of_cover|num:1 }} d{% else %}—{% endif %}</td>
+    <td class="num fw-bold {% if r.needs_reorder %}text-negative{% endif %}">{{ r.suggested_qty|qty }}</td>
+    <td class="text-end"><a class="btn btn-sm btn-light" href="{% url 'inventory:reorder_edit' r.product.pk %}" title="Ajustar parâmetros"><i class="bi bi-sliders"></i></a></td>
+  </tr>{% empty %}<tr><td colspan="11"><div class="empty-state"><i class="bi bi-check2-circle"></i>Nenhum produto nesta lista.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% if rows and "purchasing" in allowed_modules and current_membership.is_manager_or_admin %}<button class="btn btn-primary mt-3"><i class="bi bi-cart-plus me-1"></i>Gerar pedidos de compra dos selecionados</button>{% endif %}
+</form>
+{% endblock %}

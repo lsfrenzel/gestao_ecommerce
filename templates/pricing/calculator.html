@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Precificação{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Calculadora de preço de venda</h1><div class="subtitle">{% if simulation %}Simulação “{{ simulation.name }}” de {{ simulation.created_at|date:"d/m/Y" }}{% else %}Calcule preço mínimo, preço sugerido, markup e margem de contribuição{% endif %}</div></div>
+  <a class="btn btn-outline-primary" href="{% url 'pricing:simulations' %}"><i class="bi bi-folder2-open me-1"></i>Simulações salvas</a>
+</div>
+<div class="row g-3">
+  <div class="col-xl-5">
+    <div hx-post="{% url 'pricing:calculator' %}" hx-target="#results" hx-include="#pricing-form" hx-trigger="input changed delay:600ms, change" hx-indicator="#calc-indicator">
+    <form method="post" id="pricing-form" novalidate>
+      {% csrf_token %}
+      <div class="card mb-3"><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.product col="col-md-7" %}
+        {% include "partials/field.html" with field=form.name col="col-md-5" %}
+        <div class="col-12"><div class="form-text mt-n2 mb-1">Ao escolher um produto, use <a href="#" onclick="const v=document.getElementById('id_product').value; if(v){window.location='?produto='+v;} return false;">carregar custos do cadastro</a>.</div></div>
+      </div></div></div>
+      <div class="card mb-3"><div class="card-header">1. Custos do produto (R$ por unidade)</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.acquisition_cost col="col-6" %}
+        {% include "partials/field.html" with field=form.inbound_freight col="col-6" %}
+        {% include "partials/field.html" with field=form.packaging_cost col="col-6" %}
+        {% include "partials/field.html" with field=form.other_unit_costs col="col-6" %}
+      </div></div></div>
+      <div class="card mb-3"><div class="card-header">2. Despesas variáveis percentuais (% do preço)</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.tax_pct col="col-6" %}
+        {% include "partials/field.html" with field=form.marketplace_pct col="col-6" %}
+        {% include "partials/field.html" with field=form.payment_fee_pct col="col-6" %}
+        {% include "partials/field.html" with field=form.sales_commission_pct col="col-6" %}
+        {% include "partials/field.html" with field=form.other_pct col="col-6" %}
+      </div></div></div>
+      <div class="card mb-3"><div class="card-header">3. Despesas variáveis por venda (R$ por unidade)</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.subsidized_shipping col="col-6" %}
+        {% include "partials/field.html" with field=form.handling_cost col="col-6" %}
+        {% include "partials/field.html" with field=form.other_per_sale col="col-6" %}
+      </div></div></div>
+      <div class="card mb-3"><div class="card-header">4. Margem e simulação</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.target_margin_pct col="col-md-6" %}
+        {% include "partials/field.html" with field=form.simulate_prices col="col-md-6" %}
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-calculator me-1"></i>Calcular</button>
+        <button class="btn btn-outline-primary" type="submit" name="action" value="save"><i class="bi bi-save me-1"></i>Salvar simulação</button>
+        <span id="calc-indicator" class="htmx-indicator small text-secondary align-self-center"><span class="spinner-border spinner-border-sm"></span> calculando…</span>
+      </div>
+      <div class="form-text mt-2">Os resultados são atualizados automaticamente enquanto você digita.</div>
+      </div></div>
+    </form>
+    </div>
+  </div>
+  <div class="col-xl-7"><div id="results">{% include "pricing/_results.html" %}</div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Alertas de estoque{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Alertas de estoque</h1><div class="subtitle">Calculados automaticamente a partir dos saldos, reservas e histórico de vendas</div></div></div>
+{% include "inventory/_nav.html" with active="alerts" %}
+<div class="row g-3">
+  {% with items=alerts.out %}<div class="col-lg-6" id="esgotados"><div class="card h-100"><div class="card-header text-danger"><i class="bi bi-x-octagon me-1"></i>Esgotados ({{ items|length }})</div>
+    <ul class="list-group list-group-flush">{% for p in items %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'products:detail' p.pk %}">{{ p.name }}</a><span class="small text-secondary">{{ p.sku }}</span></li>{% empty %}<li class="list-group-item text-secondary small">Nenhum produto esgotado.</li>{% endfor %}</ul></div></div>{% endwith %}
+  {% with items=alerts.low %}<div class="col-lg-6" id="baixo"><div class="card h-100"><div class="card-header text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Estoque baixo — disponível ≤ mínimo ({{ items|length }})</div>
+    <ul class="list-group list-group-flush">{% for p in items %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'products:detail' p.pk %}">{{ p.name }}</a><span class="small">{{ p.available_stock|qty }} / mín. {{ p.min_stock|qty }}</span></li>{% empty %}<li class="list-group-item text-secondary small">Nenhum produto abaixo do mínimo.</li>{% endfor %}</ul></div></div>{% endwith %}
+  <div class="col-lg-6" id="ponto-pedido"><div class="card h-100"><div class="card-header"><i class="bi bi-arrow-repeat me-1"></i>No ponto de pedido ({{ alerts.reorder|length }}) e próximos ({{ alerts.near|length }})</div>
+    <ul class="list-group list-group-flush">{% for r in alerts.reorder %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'products:detail' r.product.pk %}">{{ r.product.name }}</a><span class="small text-danger">comprar {{ r.suggested_qty|qty }}</span></li>{% endfor %}
+      {% for r in alerts.near %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'products:detail' r.product.pk %}">{{ r.product.name }}</a><span class="small text-secondary">próximo · PP {{ r.reorder_point|qty }}</span></li>{% endfor %}
+      {% if not alerts.reorder and not alerts.near %}<li class="list-group-item text-secondary small">Nenhum produto no ou próximo do ponto de pedido.</li>{% endif %}</ul></div></div>
+  {% with items=alerts.excess %}<div class="col-lg-6" id="excesso"><div class="card h-100"><div class="card-header"><i class="bi bi-stack me-1"></i>Excesso de estoque — acima do máximo ({{ items|length }})</div>
+    <ul class="list-group list-group-flush">{% for p in items %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'products:detail' p.pk %}">{{ p.name }}</a><span class="small">{{ p.stock_on_hand|qty }} / máx. {{ p.max_stock|qty }}</span></li>{% empty %}<li class="list-group-item text-secondary small">Nenhum produto acima do máximo.</li>{% endfor %}</ul></div></div>{% endwith %}
+  {% with items=alerts.idle %}<div class="col-12" id="parados"><div class="card"><div class="card-header"><i class="bi bi-hourglass-split me-1"></i>Sem movimentação há mais de {{ company.idle_stock_days }} dias ({{ items|length }})</div>
+    <ul class="list-group list-group-flush">{% for p in items %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'products:detail' p.pk %}">{{ p.name }}</a><span class="small text-secondary">última: {{ p.last_movement_at|date:"d/m/Y"|default:"nunca" }} · parado {{ p.stock_value|brl }}</span></li>{% empty %}<li class="list-group-item text-secondary small">Nenhum produto parado.</li>{% endfor %}</ul></div></div>{% endwith %}
+</div>
+{% endblock %}

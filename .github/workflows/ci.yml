@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gestao
+          POSTGRES_PASSWORD: gestao
+          POSTGRES_DB: gestao
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gestao" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://gestao:gestao@localhost:5432/gestao
+      DJANGO_TESTING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py check --deploy --fail-level ERROR
+        env:
+          DJANGO_TESTING: "0"
+          DJANGO_SECRET_KEY: ci-only-secret-key-with-enough-length-and-entropy-0123456789abcdef
+      - run: python manage.py test tests

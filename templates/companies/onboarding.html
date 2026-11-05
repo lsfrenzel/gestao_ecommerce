@@ -1,0 +1,30 @@
+{% extends "accounts/auth_base.html" %}
+{% block title %}Cadastre sua empresa{% endblock %}
+{% block auth %}
+<h1 class="h4 fw-bold text-navy mb-1">Cadastre sua empresa</h1>
+<p class="text-secondary mb-3">Os dados da empresa ficam isolados: somente os usuários que você convidar terão acesso.</p>
+<form method="post" novalidate>{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="row">
+    {% include "partials/field.html" with field=form.trade_name %}
+    {% include "partials/field.html" with field=form.legal_name col="col-md-7" %}
+    {% include "partials/field.html" with field=form.cnpj col="col-md-5" %}
+    {% include "partials/field.html" with field=form.segment col="col-md-6" %}
+    {% include "partials/field.html" with field=form.phone col="col-md-6" %}
+    {% include "partials/field.html" with field=form.email %}
+  </div>
+  <details class="mb-3"><summary class="small fw-semibold mb-2">Endereço (opcional)</summary>
+    <div class="row">
+      {% include "partials/field.html" with field=form.zip_code col="col-md-4" %}
+      {% include "partials/field.html" with field=form.street col="col-md-8" %}
+      {% include "partials/field.html" with field=form.number col="col-md-3" %}
+      {% include "partials/field.html" with field=form.complement col="col-md-4" %}
+      {% include "partials/field.html" with field=form.district col="col-md-5" %}
+      {% include "partials/field.html" with field=form.city col="col-md-8" %}
+      {% include "partials/field.html" with field=form.state col="col-md-4" %}
+    </div>
+  </details>
+  <button class="btn btn-primary w-100 py-2">Cadastrar empresa e começar</button>
+</form>
+<form method="post" action="{% url 'accounts:logout' %}" class="text-center mt-3">{% csrf_token %}<button class="btn btn-link btn-sm">Sair</button></form>
+{% endblock %}

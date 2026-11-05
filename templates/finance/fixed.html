@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Despesas fixas{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Despesas fixas mensais</h1><div class="subtitle">Total mensal ativo: <strong>{{ total|brl }}</strong> — base do ponto de equilíbrio</div></div>
+  <a class="btn btn-primary" href="{% url 'finance:fixed_new' %}"><i class="bi bi-plus-lg me-1"></i>Nova despesa fixa</a></div>
+{% include "finance/_nav.html" with active="fixed" %}
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card"><div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>Descrição</th><th>Categoria</th><th class="num">Valor mensal</th><th class="num">Vencimento</th><th>Ativa</th><th class="text-end">Ações</th></tr></thead>
+    <tbody>{% for e in expenses %}<tr><td>{{ e.name }}</td><td class="small">{{ e.category.name }}</td><td class="num fw-semibold">{{ e.monthly_amount|brl }}</td><td class="num">dia {{ e.due_day }}</td>
+      <td>{% if e.is_active %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-dash-circle text-secondary"></i>{% endif %}</td>
+      <td class="text-end"><a class="btn btn-sm btn-light" href="{% url 'finance:fixed_edit' e.pk %}"><i class="bi bi-pencil"></i></a>
+        {% if current_membership.is_manager_or_admin %}<a class="btn btn-sm btn-light text-danger" href="{% url 'finance:fixed_delete' e.pk %}"><i class="bi bi-trash"></i></a>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6"><div class="empty-state"><i class="bi bi-building"></i>Cadastre aluguel, internet, energia, salários, pró-labore, sistemas, contabilidade…</div></td></tr>{% endfor %}</tbody>
+  </table></div></div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-header">Gerar contas a pagar do mês</div><div class="card-body">
+    <form method="post">{% csrf_token %}
+      {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+      <button class="btn btn-outline-primary w-100" {% if not current_membership.is_manager_or_admin %}disabled{% endif %}>Gerar lançamentos</button>
+    </form>
+    <div class="small text-secondary mt-2">Cria um lançamento a pagar por despesa fixa ativa para o mês escolhido (sem duplicar se já gerado).</div>
+  </div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Parâmetros de reposição{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Parâmetros de reposição</h1><div class="subtitle">{{ product.name }} ({{ product.sku }})</div></div></div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card"><div class="card-body">
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'inventory:reorder' %}">
+      <div class="mb-3"><label class="form-label">Prazo de reposição do fornecedor (dias)</label><input class="form-control" name="lead_time_days" type="number" min="0" value="{{ product.lead_time_days }}"></div>
+      <div class="mb-3"><label class="form-label">Estoque de segurança</label><input class="form-control" name="safety_stock" type="number" min="0" step="any" value="{{ product.safety_stock|stringformat:'s' }}"></div>
+      <div class="mb-3"><label class="form-label">Consumo médio diário (ajuste manual)</label><input class="form-control" name="manual_daily_consumption" type="number" min="0" step="any" value="{{ product.manual_daily_consumption|default_if_none:''|stringformat:'s' }}">
+        <div class="form-text">Deixe vazio para usar o histórico de vendas (atual: {{ row.daily_consumption|num:2 }}/dia — {{ row.consumption_source }}).</div></div>
+      <button class="btn btn-primary">Salvar</button> <a class="btn btn-light" href="{% url 'inventory:reorder' %}">Cancelar</a>
+    </form>
+  </div></div></div>
+  <div class="col-lg-6"><div class="card"><div class="card-header">Situação atual</div><div class="card-body small">
+    <div>Disponível: <strong>{{ row.available|qty }}</strong> · reservado {{ row.reserved|qty }} · a caminho {{ row.incoming|qty }}</div>
+    <div>Ponto de pedido: <strong>{{ row.reorder_point|qty }}</strong></div>
+    <div>Sugestão de compra: <strong>{{ row.suggested_qty|qty }}</strong></div>
+  </div></div></div>
+</div>
+{% endblock %}

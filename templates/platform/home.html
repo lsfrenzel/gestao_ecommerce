@@ -1,0 +1,32 @@
+{% extends "platform/base.html" %}
+{% block title %}Plataforma{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Visão geral da plataforma</h1><div class="subtitle">Indicadores agregados — sem acesso a dados operacionais das empresas</div></div></div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Usuários cadastrados</div><div class="value">{{ stats.users }}</div><div class="hint">{{ stats.new_users_month }} novo(s) neste mês</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Usuários ativos / bloqueados</div><div class="value">{{ stats.active_users }} <span class="fs-6 text-danger">/ {{ stats.blocked_users }}</span></div><div class="hint">{{ stats.active_30d }} acessaram nos últimos 30 dias</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Empresas</div><div class="value">{{ stats.companies }}</div><div class="hint">{{ stats.companies_active }} ativas · {{ stats.companies_trial }} em teste · <span class="text-danger">{{ stats.companies_suspended }} suspensas</span></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Acessos (logins)</div><div class="value">{{ stats.logins_30d }}</div><div class="hint">últimos 30 dias · {{ stats.logins_total }} no total</div></div></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Novos cadastros por mês</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-signups"></canvas></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Acessos por dia (30 dias)</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-logins"></canvas></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Usuários por plano</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-plans"></canvas></div></div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card"><div class="card-header">Distribuição por plano</div><table class="table table-sm mb-0">
+    <thead><tr><th>Plano</th><th class="num">Empresas</th><th class="num">Usuários ativos</th></tr></thead>
+    <tbody>{% for p in by_plan %}<tr><td>{{ p.name }}</td><td class="num">{{ p.companies_n }}</td><td class="num">{{ p.users_n }}</td></tr>{% empty %}<tr><td colspan="3" class="text-secondary">Nenhum plano cadastrado.</td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="col-lg-7"><div class="card"><div class="card-header d-flex justify-content-between">Ações administrativas recentes <a class="small" href="{% url 'platform:audit' %}">ver auditoria</a></div><ul class="list-group list-group-flush small">
+    {% for l in recent %}<li class="list-group-item"><span class="text-secondary">{{ l.created_at|date:"d/m/Y H:i" }}</span> · <code>{{ l.action }}</code> · {{ l.target_repr }} <span class="text-secondary">por {{ l.actor|default:"sistema" }}</span></li>
+    {% empty %}<li class="list-group-item text-secondary">Nenhuma ação registrada.</li>{% endfor %}</ul></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const P = {{ chart|safe }};
+  makeChart("ch-signups", {type: "bar", data: {labels: P.signups.labels, datasets: [{label: "Cadastros", data: P.signups.values}]}});
+  makeChart("ch-logins", {type: "line", data: {labels: P.logins.labels, datasets: [{label: "Acessos", data: P.logins.values, fill: true, color: "#0f9d58"}]}});
+  makeChart("ch-plans", {type: "doughnut", data: {labels: P.plans.labels, datasets: [{data: P.plans.values}]}, options: {plugins: {legend: {position: "bottom"}}}});
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Compras{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Pedidos de compra</h1><div class="subtitle">{{ open_count }} em aberto{% if late_count %} · <span class="text-danger">{{ late_count }} atrasado(s)</span>{% endif %}</div></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% url 'purchasing:suppliers' %}"><i class="bi bi-truck me-1"></i>Fornecedores</a>
+    {% if current_membership.is_manager_or_admin %}<a class="btn btn-primary" href="{% url 'purchasing:order_new' %}"><i class="bi bi-plus-lg me-1"></i>Novo pedido</a>{% endif %}</div>
+</div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <input class="form-control" style="max-width:280px" type="search" name="q" value="{{ q }}" placeholder="Fornecedor ou nº">
+  <select name="status" class="form-select" style="max-width:220px" onchange="this.form.submit()"><option value="">Todos os status</option>
+    {% for k, l in statuses %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Nº</th><th>Fornecedor</th><th>Data</th><th>Previsão</th><th>Status</th><th class="num">Itens</th><th class="num">Total</th></tr></thead>
+  <tbody>{% for o in page_obj %}<tr>
+    <td><a class="fw-semibold" href="{% url 'purchasing:order_detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.supplier }}</td><td>{{ o.order_date|date:"d/m/Y" }}</td>
+    <td>{{ o.expected_date|date:"d/m/Y"|default:"—" }}</td><td><span class="badge badge-soft">{{ o.get_status_display }}</span></td>
+    <td class="num">{{ o.items.all|length }}</td><td class="num">{{ o.total|brl }}</td>
+  </tr>{% empty %}<tr><td colspan="7"><div class="empty-state"><i class="bi bi-cart3"></i>Nenhum pedido de compra.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

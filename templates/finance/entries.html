@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}{% if kind == "pagar" %}Contas a pagar{% else %}Contas a receber{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{% if kind == "pagar" %}Contas a pagar{% else %}Contas a receber{% endif %}</h1><div class="subtitle">Total filtrado: {{ total|brl }}</div></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% qs exportar='csv' page='' %}"><i class="bi bi-download me-1"></i>CSV</a>
+    <a class="btn btn-primary" href="{% url 'finance:entry_new' %}?tipo={{ kind }}"><i class="bi bi-plus-lg me-1"></i>Novo lançamento</a></div>
+</div>
+{% include "finance/_nav.html" with active=kind %}
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <select name="situacao" class="form-select" style="max-width:180px" onchange="this.form.submit()">
+    <option value="abertos" {% if status == 'abertos' %}selected{% endif %}>Em aberto</option><option value="vencidos" {% if status == 'vencidos' %}selected{% endif %}>Vencidos</option>
+    <option value="liquidados" {% if status == 'liquidados' %}selected{% endif %}>Liquidados</option><option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option></select>
+  <select name="categoria" class="form-select" style="max-width:240px" onchange="this.form.submit()"><option value="">Todas as categorias</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if category == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+  <input class="form-control" style="max-width:260px" type="search" name="q" value="{{ q }}" placeholder="Descrição ou fornecedor/cliente">
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th class="num">Valor</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
+  <tbody>{% for e in page_obj %}<tr>
+    <td class="{% if e.is_overdue %}text-danger fw-semibold{% endif %}">{{ e.due_date|date:"d/m/Y" }}</td>
+    <td>{{ e.description }}<div class="small text-secondary">{{ e.counterparty }}{% if e.sales_order_id %} · <a href="{% url 'sales:detail' e.sales_order_id %}">pedido</a>{% endif %}{% if e.purchase_order_id %} · <a href="{% url 'purchasing:order_detail' e.purchase_order_id %}">compra</a>{% endif %}</div></td>
+    <td class="small">{{ e.category.name }}</td><td class="num fw-semibold">{{ e.amount|brl }}</td>
+    <td class="small">{% if e.status == "settled" %}<span class="badge status-ok">Liquidado</span> {{ e.settled_at|date:"d/m/Y" }}{% elif e.status == "cancelled" %}<span class="badge text-bg-secondary">Cancelado</span>{% elif e.is_overdue %}<span class="badge status-out">Vencido</span>{% else %}<span class="badge status-low">Em aberto</span>{% endif %}</td>
+    <td class="text-end text-nowrap">
+      {% if e.status == "open" %}
+      <button class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#settle-{{ e.pk }}">{% if kind == "pagar" %}Pagar{% else %}Receber{% endif %}</button>
+      {% if not e.sales_order_id and not e.purchase_order_id %}<a class="btn btn-sm btn-light" href="{% url 'finance:entry_edit' e.pk %}"><i class="bi bi-pencil"></i></a>{% endif %}
+      {% if current_membership.is_manager_or_admin %}<form method="post" action="{% url 'finance:entry_cancel' e.pk %}" class="d-inline" data-confirm="Cancelar este lançamento?">{% csrf_token %}<button class="btn btn-sm btn-light text-danger" title="Cancelar"><i class="bi bi-x-lg"></i></button></form>{% endif %}
+      {% endif %}
+    </td>
+  </tr>
+  {% if e.status == "open" %}<tr class="collapse" id="settle-{{ e.pk }}"><td colspan="6" class="bg-light">
+    <form method="post" action="{% url 'finance:entry_settle' e.pk %}" class="d-flex flex-wrap gap-2 align-items-end">{% csrf_token %}
+      <div><label class="form-label small mb-1">Data</label><input type="date" name="settled_at" class="form-control form-control-sm" value="{% now 'Y-m-d' %}" required></div>
+      <div><label class="form-label small mb-1">Valor (R$)</label><input type="number" step="0.01" min="0.01" name="amount" class="form-control form-control-sm" value="{{ e.amount|stringformat:'s' }}" required></div>
+      <button class="btn btn-sm btn-success">Confirmar {% if kind == "pagar" %}pagamento{% else %}recebimento{% endif %}</button>
+    </form></td></tr>{% endif %}
+  {% empty %}<tr><td colspan="6"><div class="empty-state"><i class="bi bi-receipt"></i>Nenhum lançamento.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

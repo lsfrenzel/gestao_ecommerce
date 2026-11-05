@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block title %}Pedido de compra{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if order %}Editar compra #{{ order.number }}{% else %}Novo pedido de compra{% endif %}</h1></div>
+<form method="post" novalidate>{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="card mb-3"><div class="card-body"><div class="row">
+    {% include "partials/field.html" with field=form.supplier col="col-md-6" %}
+    {% include "partials/field.html" with field=form.order_date col="col-md-3" %}
+    {% include "partials/field.html" with field=form.expected_date col="col-md-3" %}
+    {% include "partials/field.html" with field=form.freight col="col-md-3" %}
+    {% include "partials/field.html" with field=form.other_costs col="col-md-3" %}
+    {% include "partials/field.html" with field=form.notes col="col-md-6" %}
+  </div></div></div>
+  <div class="card mb-3"><div class="card-header d-flex justify-content-between">Produtos <a href="#" data-formset-add="items"><i class="bi bi-plus"></i> adicionar linha</a></div><div class="card-body">
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="alert alert-danger py-2">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+    <div class="row g-2 small text-secondary d-none d-md-flex"><div class="col-md-6">Produto</div><div class="col-md-2">Quantidade</div><div class="col-md-3">Custo unitário (R$)</div><div class="col-md-1">Remover</div></div>
+    <div id="items-rows">
+    {% for f in formset %}<div class="row g-2 mb-2">{{ f.id }}
+      <div class="col-md-6">{{ f.product }}{% for e in f.product.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="col-md-2">{{ f.quantity }}{% for e in f.quantity.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="col-md-3">{{ f.unit_cost }}{% for e in f.unit_cost.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+      <div class="col-md-1 d-flex align-items-center">{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</div>
+    </div>{% endfor %}
+    </div>
+    <template id="items-empty"><div class="row g-2 mb-2"><div class="col-md-6">{{ formset.empty_form.product }}</div><div class="col-md-2">{{ formset.empty_form.quantity }}</div><div class="col-md-3">{{ formset.empty_form.unit_cost }}</div><div class="col-md-1"></div></div></template>
+    <div class="form-text">O frete e as outras despesas são rateados entre os itens pelo valor, compondo o custo de entrada no estoque.</div>
+  </div></div>
+  <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar rascunho</button>
+  <a class="btn btn-light" href="{% if order %}{% url 'purchasing:order_detail' order.pk %}{% else %}{% url 'purchasing:orders' %}{% endif %}">Cancelar</a>
+</form>
+{% endblock %}

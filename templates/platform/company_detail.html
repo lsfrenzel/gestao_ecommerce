@@ -1,0 +1,36 @@
+{% extends "platform/base.html" %}
+{% load ui %}
+{% block title %}{{ company.trade_name }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ company.trade_name }}</h1><div class="subtitle">{{ company.legal_name|default:"" }} {{ company.cnpj|default:"" }} · cadastrada em {{ company.created_at|date:"d/m/Y" }}</div></div></div>
+<div class="alert alert-light border small py-2"><i class="bi bi-shield-check me-1"></i>Por minimização de dados, este painel exibe somente dados cadastrais e indicadores agregados. Esta consulta foi registrada na auditoria.</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Produtos cadastrados</div><div class="value">{{ products_n }}</div><div class="hint">limite do plano: {{ company.plan.max_products|default:"ilimitado" }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Usuários</div><div class="value">{{ members|length }}</div><div class="hint">limite do plano: {{ company.plan.max_users|default:"ilimitado" }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Vendas registradas (total)</div><div class="value">{{ sales_total.n }}</div><div class="hint">{{ sales_total.total|default:0|brl }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Vendas (30 dias)</div><div class="value">{{ sales_30.n }}</div><div class="hint">{{ sales_30.total|default:0|brl }}</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-header">Situação da conta e plano</div><div class="card-body">
+      <form method="post" action="{% url 'platform:company_update' company.pk %}" data-confirm="Confirmar as alterações na conta desta empresa?">{% csrf_token %}
+        {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+        <button class="btn btn-primary">Salvar</button>
+      </form>
+      <div class="small text-secondary mt-2">Cobrança recorrente não está integrada: alterar o plano não gera cobrança.</div>
+    </div></div>
+    <div class="card"><div class="card-header">Dados cadastrais</div><div class="card-body small">
+      <div>Segmento: {{ company.get_segment_display }}</div><div>Telefone: {{ company.phone|default:"—" }}</div><div>E-mail: {{ company.email|default:"—" }}</div>
+      <div>Endereço: {{ company.address_display|default:"—" }}</div><div>Responsável: {{ company.owner|default:"—" }}</div>
+    </div></div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card mb-3"><div class="card-header">Usuários da empresa</div><table class="table table-sm mb-0">
+      <thead><tr><th>Usuário</th><th>Perfil</th><th>Último acesso</th><th>Situação</th></tr></thead>
+      <tbody>{% for m in members %}<tr><td><a href="{% url 'platform:user_detail' m.user.pk %}">{{ m.user.full_name }}</a><div class="small text-secondary">{{ m.user.email }}</div></td><td class="small">{{ m.get_role_display }}</td>
+        <td class="small">{{ m.user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</td><td class="small">{% if m.is_active and m.user.is_active %}ativo{% else %}inativo/bloqueado{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card"><div class="card-header">Ações administrativas nesta empresa</div><ul class="list-group list-group-flush small">
+      {% for l in logs %}<li class="list-group-item">{{ l.created_at|date:"d/m/Y H:i" }} · <code>{{ l.action }}</code> · {{ l.actor|default:"" }}</li>{% empty %}<li class="list-group-item text-secondary">Nenhum registro.</li>{% endfor %}</ul></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block title %}Integrações{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Configurações</h1><div class="subtitle">Tokens de API para integrações (marketplaces, loja virtual, ERP)</div></div></div>
+{% include "companies/_tabs.html" with tab="api" %}
+{% if new_token %}
+<div class="alert alert-warning"><strong>Copie o token agora</strong> — por segurança ele não será exibido novamente:<br>
+  <code class="user-select-all fs-6">{{ new_token }}</code></div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card"><div class="card-header">Novo token</div><div class="card-body">
+    <form method="post">{% csrf_token %}
+      <label class="form-label">Identificação</label>
+      <input class="form-control mb-3" name="name" maxlength="80" placeholder="Ex.: Integração Shopee" required>
+      <button class="btn btn-primary">Gerar token</button>
+    </form>
+    <hr>
+    <div class="small text-secondary">
+      Envie <code>Authorization: Bearer &lt;token&gt;</code>. Endpoints:
+      <ul class="mb-0"><li><code>GET /api/v1/produtos/</code></li><li><code>GET /api/v1/produtos/&lt;sku&gt;/</code></li><li><code>POST /api/v1/pedidos/</code></li></ul>
+    </div>
+  </div></div></div>
+  <div class="col-lg-7"><div class="card"><div class="table-responsive"><table class="table">
+    <thead><tr><th>Identificação</th><th>Prefixo</th><th>Último uso</th><th>Situação</th><th></th></tr></thead>
+    <tbody>{% for t in tokens %}<tr>
+      <td>{{ t.name }}</td><td><code>{{ t.prefix }}…</code></td><td class="small">{{ t.last_used_at|date:"d/m/Y H:i"|default:"—" }}</td>
+      <td>{% if t.is_active %}<span class="badge status-ok">Ativo</span>{% else %}<span class="badge text-bg-secondary">Revogado</span>{% endif %}</td>
+      <td class="text-end">{% if t.is_active %}<form method="post" action="{% url 'companies:revoke_api_token' t.pk %}" data-confirm="Revogar este token? Integrações que o usam deixarão de funcionar.">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Revogar</button></form>{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="5" class="text-secondary text-center py-4">Nenhum token criado.</td></tr>{% endfor %}</tbody>
+  </table></div></div></div>
+</div>
+{% endblock %}

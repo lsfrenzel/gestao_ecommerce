@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Produtos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Produtos</h1><div class="subtitle">{{ total }} produto(s)</div></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'products:categories' %}"><i class="bi bi-tags me-1"></i>Categorias</a>
+    <a class="btn btn-outline-primary" href="{% url 'products:import' %}"><i class="bi bi-upload me-1"></i>Importar CSV</a>
+    <a class="btn btn-outline-primary" href="{% qs exportar='csv' page='' %}"><i class="bi bi-download me-1"></i>Exportar CSV</a>
+    <a class="btn btn-primary" href="{% url 'products:create' %}"><i class="bi bi-plus-lg me-1"></i>Novo produto</a>
+  </div>
+</div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <input class="form-control" style="max-width:300px" type="search" name="q" value="{{ q }}" placeholder="Nome, SKU ou código de barras">
+  <select name="categoria" class="form-select" style="max-width:220px" onchange="this.form.submit()">
+    <option value="">Todas as categorias</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if category == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select name="situacao" class="form-select" style="max-width:170px" onchange="this.form.submit()">
+    <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
+    <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Arquivados</option>
+    <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+  </select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th></th><th>Produto</th><th>Categoria</th><th class="num">Custo total</th><th class="num">Preço</th><th class="num">Markup</th><th class="num">Margem bruta</th><th class="num">Estoque</th><th>Situação</th></tr></thead>
+  <tbody>
+  {% for p in page_obj %}
+  <tr>
+    <td style="width:46px">{% if p.image %}<img src="{{ p.image.url }}" alt="" width="38" height="38" class="rounded object-fit-cover">{% else %}<span class="avatar bg-light text-secondary"><i class="bi bi-image"></i></span>{% endif %}</td>
+    <td><a class="fw-semibold" href="{% url 'products:detail' p.pk %}">{{ p.name }}</a><div class="small text-secondary">{{ p.sku }}{% if not p.is_active %} · arquivado{% endif %}</div></td>
+    <td>{{ p.category|default:"—" }}</td>
+    <td class="num">{{ p.total_unit_cost|brl }}</td>
+    <td class="num fw-semibold">{{ p.sale_price|brl }}</td>
+    <td class="num">{{ p.markup_percent|pct }}</td>
+    <td class="num {% if p.gross_margin_percent|neg %}text-negative{% endif %}">{{ p.gross_margin_percent|pct }}</td>
+    <td class="num">{{ p.available_stock|qty }} <span class="small text-secondary">{{ p.unit }}</span>{% if p.stock_reserved %}<div class="small text-secondary">{{ p.stock_reserved|qty }} reserv.</div>{% endif %}</td>
+    <td><span class="badge status-{{ p.stock_status }}">{{ p.stock_status_label }}</span></td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="9"><div class="empty-state"><i class="bi bi-box-seam"></i>Nenhum produto encontrado.<br><a class="btn btn-primary btn-sm mt-2" href="{% url 'products:create' %}">Cadastrar produto</a></div></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

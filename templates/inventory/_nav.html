@@ -1,0 +1,6 @@
+<ul class="nav nav-pills mb-3 gap-1">
+  <li class="nav-item"><a class="nav-link {% if active == 'overview' %}active{% endif %}" href="{% url 'inventory:overview' %}">Saldos</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'history' %}active{% endif %}" href="{% url 'inventory:history' %}">Movimentações</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'alerts' %}active{% endif %}" href="{% url 'inventory:alerts' %}">Alertas</a></li>
+  {% if "reorder" in allowed_modules %}<li class="nav-item"><a class="nav-link {% if active == 'reorder' %}active{% endif %}" href="{% url 'inventory:reorder' %}">Ponto de pedido</a></li>{% endif %}
+</ul>

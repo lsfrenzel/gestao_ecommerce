@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-side">
+    <div style="max-width:460px">
+      <div class="d-flex align-items-center gap-2 mb-4"><span class="avatar" style="background:#34d399;border-radius:10px"><i class="bi bi-graph-up-arrow"></i></span><span class="fs-5 fw-bold text-white">{{ PLATFORM_NAME }}</span></div>
+      <h2 class="mb-3">Gestão inteligente para o seu e-commerce</h2>
+      <p class="mb-4 opacity-75">Precificação, margens, ponto de equilíbrio, estoque, compras, vendas e financeiro em um só lugar — com números reais do seu negócio.</p>
+      <ul class="list-unstyled small opacity-75 d-grid gap-2">
+        <li><i class="bi bi-check2-circle me-2"></i>Quanto cobrar e qual é a sua margem de contribuição</li>
+        <li><i class="bi bi-check2-circle me-2"></i>Quanto vender para atingir o ponto de equilíbrio</li>
+        <li><i class="bi bi-check2-circle me-2"></i>Quando comprar e quanto vale o seu estoque</li>
+      </ul>
+    </div>
+  </div>
+  <div class="auth-form"><div class="box">
+    {% include "partials/messages.html" %}
+    {% block auth %}{% endblock %}
+  </div></div>
+</div>
+{% endblock %}

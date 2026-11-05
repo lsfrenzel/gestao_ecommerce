@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Compra #{{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Compra #{{ order.number }} <span class="badge badge-soft fs-6 align-middle">{{ order.get_status_display }}</span></h1>
+    <div class="subtitle"><a href="{% url 'purchasing:supplier_detail' order.supplier.pk %}">{{ order.supplier }}</a> · pedido em {{ order.order_date|date:"d/m/Y" }} · previsão {{ order.expected_date|date:"d/m/Y"|default:"—" }}</div></div>
+  {% if current_membership.is_manager_or_admin %}
+  <div class="d-flex flex-wrap gap-2">
+    {% if order.is_editable %}
+      <a class="btn btn-outline-primary" href="{% url 'purchasing:order_edit' order.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>
+      <form method="post" action="{% url 'purchasing:order_action' order.pk 'enviar' %}" data-confirm="Marcar como enviado ao fornecedor? Os itens deixam de ser editáveis.">{% csrf_token %}<button class="btn btn-primary"><i class="bi bi-send me-1"></i>Marcar como enviado</button></form>
+      <form method="post" action="{% url 'purchasing:order_action' order.pk 'excluir' %}" data-confirm="Excluir este rascunho?">{% csrf_token %}<button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+    {% endif %}
+    {% if order.status == "ordered" or order.status == "draft" %}
+      <form method="post" action="{% url 'purchasing:order_action' order.pk 'cancelar' %}" data-confirm="Cancelar este pedido de compra?">{% csrf_token %}<button class="btn btn-outline-danger">Cancelar pedido</button></form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="table-responsive"><table class="table">
+      <thead><tr><th>Produto</th><th class="num">Qtd.</th><th class="num">Recebido</th><th class="num">Pendente</th><th class="num">Custo un.</th><th class="num">Total</th></tr></thead>
+      <tbody>{% for i in items %}<tr><td><a href="{% url 'products:detail' i.product.pk %}">{{ i.product.name }}</a><div class="small text-secondary">{{ i.product.sku }}</div></td>
+        <td class="num">{{ i.quantity|qty }}</td><td class="num">{{ i.received_quantity|qty }}</td><td class="num">{{ i.pending_quantity|qty }}</td><td class="num">{{ i.unit_cost|brl }}</td><td class="num">{{ i.total|brl }}</td></tr>{% endfor %}</tbody>
+      <tfoot class="small">
+        <tr><td colspan="5" class="text-end">Itens</td><td class="num">{{ order.items_total|brl }}</td></tr>
+        <tr><td colspan="5" class="text-end">Frete de entrada</td><td class="num">{{ order.freight|brl }}</td></tr>
+        <tr><td colspan="5" class="text-end">Outras despesas</td><td class="num">{{ order.other_costs|brl }}</td></tr>
+        <tr class="fw-bold"><td colspan="5" class="text-end">Total</td><td class="num">{{ order.total|brl }}</td></tr>
+      </tfoot>
+    </table></div></div>
+    {% if movements %}<div class="card"><div class="card-header">Entradas no estoque</div><div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Data</th><th>Produto</th><th class="num">Qtd.</th><th class="num">Custo de entrada</th><th>Usuário</th></tr></thead>
+      <tbody>{% for m in movements %}<tr><td class="small">{{ m.created_at|date:"d/m/Y H:i" }}</td><td>{{ m.product.name }}</td><td class="num">{{ m.quantity|qty }}</td><td class="num">{{ m.unit_cost|brl }}</td><td class="small">{{ m.user|default:"" }}</td></tr>{% endfor %}</tbody>
+    </table></div></div>{% endif %}
+  </div>
+  <div class="col-lg-4">
+    {% if receive_form and current_membership.is_manager_or_admin %}
+    <div class="card mb-3"><div class="card-header">Registrar recebimento</div><div class="card-body">
+      <form method="post" action="{% url 'purchasing:order_action' order.pk 'receber' %}" data-confirm="Confirmar o recebimento? O estoque e o custo médio serão atualizados.">{% csrf_token %}
+        {% for field in receive_form %}{% include "partials/field.html" %}{% endfor %}
+        <div class="form-text mb-2">Informe a quantidade efetivamente recebida (recebimento parcial é permitido).</div>
+        <button class="btn btn-success w-100"><i class="bi bi-box-arrow-in-down me-1"></i>Receber</button>
+      </form>
+    </div></div>
+    {% endif %}
+    <div class="card mb-3"><div class="card-header">Financeiro</div><ul class="list-group list-group-flush small">
+      {% for e in entries %}<li class="list-group-item d-flex justify-content-between"><span>{{ e.description }}<div class="text-secondary">venc. {{ e.due_date|date:"d/m/Y" }} · {{ e.get_status_display }}</div></span><strong>{{ e.amount|brl }}</strong></li>
+      {% empty %}<li class="list-group-item text-secondary">A conta a pagar é gerada no recebimento.</li>{% endfor %}</ul></div>
+    {% if order.notes %}<div class="card"><div class="card-body small">{{ order.notes|linebreaksbr }}</div></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

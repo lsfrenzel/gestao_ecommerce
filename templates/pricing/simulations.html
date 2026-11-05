@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Simulações salvas{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Simulações de preço salvas</h1><a class="btn btn-primary" href="{% url 'pricing:calculator' %}"><i class="bi bi-plus-lg me-1"></i>Nova simulação</a></div>
+<form method="get" class="filters d-flex gap-2"><input class="form-control" style="max-width:320px" type="search" name="q" value="{{ q }}" placeholder="Nome ou produto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Simulação</th><th>Produto</th><th class="num">Preço mínimo</th><th class="num">Preço sugerido</th><th class="num">Margem desejada</th><th>Criada em</th><th>Aplicada</th><th></th></tr></thead>
+  <tbody>{% for s in page_obj %}<tr>
+    <td><a class="fw-semibold" href="{% url 'pricing:calculator' %}?simulacao={{ s.pk }}">{{ s.name }}</a></td>
+    <td>{% if s.product %}<a href="{% url 'products:detail' s.product.pk %}">{{ s.product.name }}</a>{% else %}—{% endif %}</td>
+    <td class="num">{{ s.minimum_price|brl }}</td><td class="num fw-semibold">{{ s.suggested_price|brl }}</td><td class="num">{{ s.target_margin_pct|pct }}</td>
+    <td class="small">{{ s.created_at|date:"d/m/Y H:i" }}<div class="text-secondary">{{ s.created_by|default:"" }}</div></td>
+    <td class="small">{{ s.applied_at|date:"d/m/Y"|default:"—" }}</td>
+    <td class="text-end"><a class="btn btn-sm btn-light text-danger" href="{% url 'pricing:simulation_delete' s.pk %}"><i class="bi bi-trash"></i></a></td>
+  </tr>{% empty %}<tr><td colspan="8"><div class="empty-state"><i class="bi bi-folder2-open"></i>Nenhuma simulação salva.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

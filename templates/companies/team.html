@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block title %}Usuários e permissões{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Configurações</h1><div class="subtitle">Usuários, perfis e módulos permitidos</div></div>
+  <a class="btn btn-primary" href="{% url 'companies:invite' %}"><i class="bi bi-person-plus me-1"></i>Convidar usuário</a></div>
+{% include "companies/_tabs.html" with tab="equipe" %}
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Usuário</th><th>Perfil</th><th>Módulos</th><th>Último acesso</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
+  <tbody>
+  {% for m in members %}
+  <tr>
+    <td><div class="fw-semibold">{{ m.user.full_name }}</div><div class="small text-secondary">{{ m.user.email }}</div></td>
+    <td><span class="badge badge-soft">{{ m.get_role_display }}</span></td>
+    <td class="small text-secondary">{% if m.role == "admin" %}Todos{% else %}{{ m.allowed_modules|length }} módulo(s){% endif %}</td>
+    <td class="small">{{ m.user.last_login|date:"d/m/Y H:i"|default:"Nunca acessou" }}</td>
+    <td>{% if m.is_active %}<span class="badge status-ok">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+    <td class="text-end text-nowrap">
+      <a class="btn btn-sm btn-light" href="{% url 'companies:edit_member' m.pk %}"><i class="bi bi-pencil"></i> Permissões</a>
+      {% if m.is_active and m.user_id != user.id %}
+      <form method="post" action="{% url 'companies:resend_invite' m.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-light" title="Enviar link de acesso"><i class="bi bi-envelope"></i></button></form>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+<div class="card mt-3"><div class="card-body small text-secondary">
+  <strong>Administrador da empresa</strong>: acesso total, inclusive usuários e configurações. <strong>Gerente</strong>: produtos, estoque, compras, vendas, financeiro e relatórios (pode excluir, cancelar e ajustar). <strong>Operador</strong>: apenas os módulos liberados, sem exclusões, ajustes de estoque ou cancelamentos.
+</div></div>
+{% endblock %}

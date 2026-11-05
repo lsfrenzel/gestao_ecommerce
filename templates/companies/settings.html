@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block title %}Configurações{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Configurações</h1><div class="subtitle">Plano {{ company.plan|default:"—" }} · {{ company.get_status_display }}</div></div></div>
+{% include "companies/_tabs.html" %}
+{% if tab == "dados" %}
+<div class="card" style="max-width:900px"><div class="card-body">
+  <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="form" value="dados">
+    {% with form=data_form %}{% include "partials/form_errors.html" %}
+    <div class="row">{% for field in form %}{% include "partials/field.html" with col="col-md-6" %}{% endfor %}</div>{% endwith %}
+    <button class="btn btn-primary">Salvar dados</button>
+  </form>
+</div></div>
+{% elif tab == "config" %}
+<div class="card" style="max-width:900px"><div class="card-body">
+  <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="form" value="config">
+    {% with form=settings_form %}{% include "partials/form_errors.html" %}
+    <div class="row">{% for field in form %}{% include "partials/field.html" with col="col-md-6" %}{% endfor %}</div>{% endwith %}
+    <button class="btn btn-primary">Salvar configurações</button>
+  </form>
+</div></div>
+{% else %}
+<div class="card" style="max-width:700px">
+  <div class="card-header d-flex justify-content-between align-items-center">Depósitos
+    {% if company.multi_warehouse_enabled %}<a class="btn btn-sm btn-primary" href="{% url 'companies:warehouse_new' %}"><i class="bi bi-plus-lg"></i> Novo depósito</a>{% endif %}</div>
+  <ul class="list-group list-group-flush">
+    {% for w in warehouses %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <span>{{ w.name }} {% if w.is_default %}<span class="badge badge-soft">principal</span>{% endif %} {% if not w.is_active %}<span class="badge text-bg-secondary">inativo</span>{% endif %}</span>
+      {% if company.multi_warehouse_enabled %}<a class="btn btn-sm btn-light" href="{% url 'companies:warehouse_edit' w.pk %}"><i class="bi bi-pencil"></i></a>{% endif %}
+    </li>{% endfor %}
+  </ul>
+  {% if not company.multi_warehouse_enabled %}<div class="card-body small text-secondary">Para cadastrar outros depósitos e transferir estoque entre eles, habilite “múltiplos depósitos” na aba Configurações (recurso conforme o plano).</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

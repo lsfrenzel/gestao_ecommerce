@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block title %}Importar produtos{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Importar produtos (CSV)</h1><a class="btn btn-outline-primary" href="{% url 'products:import_template' %}"><i class="bi bi-download me-1"></i>Baixar modelo</a></div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card"><div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+      {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+      <button class="btn btn-primary"><i class="bi bi-upload me-1"></i>Importar</button>
+    </form>
+    {% if result %}
+    <hr><div class="small"><strong>{{ result.created }}</strong> criado(s), <strong>{{ result.updated }}</strong> atualizado(s), <strong>{{ result.skipped }}</strong> ignorado(s).</div>
+    {% if result.errors %}<div class="alert alert-warning mt-2 small mb-0"><strong>Linhas com problema:</strong><ul class="mb-0">{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+    {% endif %}
+  </div></div></div>
+  <div class="col-lg-6"><div class="card"><div class="card-header">Colunas aceitas</div><div class="card-body small">
+    <p class="text-secondary">Obrigatórias: <code>sku</code> e <code>nome</code>. Valores com vírgula decimal (ex.: 79,90). O estoque não é importado: registre o saldo por movimentação de entrada/ajuste para manter o histórico.</p>
+    <ul class="mb-0">{% for key, label in columns %}<li><code>{{ key }}</code> — {{ label }}</li>{% endfor %}</ul>
+  </div></div></div>
+</div>
+{% endblock %}

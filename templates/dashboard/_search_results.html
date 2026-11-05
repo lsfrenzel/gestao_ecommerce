@@ -1,0 +1,8 @@
+{% if q|length >= 2 %}
+{% for group, items in results.items %}
+<div class="px-3 pt-2 small text-uppercase text-secondary fw-semibold">{{ group }}</div>
+{% for label, url in items %}<a class="d-block px-3 py-1 text-decoration-none" href="{{ url }}">{{ label }}</a>{% endfor %}
+{% empty %}
+<div class="px-3 py-2 small text-secondary">Nada encontrado para “{{ q }}”.</div>
+{% endfor %}
+{% endif %}

@@ -1,0 +1,14 @@
+{% autoescape off %}Olá, {{ user.first_name }}.
+{% if reason == "invite" %}
+{% if invited_by %}{{ invited_by }} convidou você{% else %}Você foi convidado(a){% endif %} para acessar {% if company %}a empresa {{ company }} em {% endif %}{{ platform }}.
+Para ativar seu acesso, defina sua senha pelo link abaixo:
+{% else %}
+Um administrador solicitou a redefinição do seu acesso a {{ platform }}.
+Para definir uma nova senha, use o link abaixo:
+{% endif %}
+{{ link }}
+
+O link é pessoal, de uso único e expira em {{ days }} dia(s). Nunca compartilhe sua senha com ninguém — nem com administradores.
+
+— {{ platform }}
+{% endautoescape %}

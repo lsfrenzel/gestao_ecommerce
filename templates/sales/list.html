@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Vendas{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Vendas e pedidos</h1><div class="subtitle">{{ period.start|date:"d/m/Y" }} a {{ period.end|date:"d/m/Y" }} · {{ summary.n|default:0 }} pedido(s) pagos · {{ summary.revenue|brl }}</div></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'sales:import' %}"><i class="bi bi-upload me-1"></i>Importar CSV</a>
+    <a class="btn btn-outline-primary" href="{% qs exportar='csv' page='' %}"><i class="bi bi-download me-1"></i>Exportar</a>
+    <a class="btn btn-primary" href="{% url 'sales:create' %}"><i class="bi bi-plus-lg me-1"></i>Nova venda</a>
+  </div>
+</div>
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-sm {% if not status %}btn-primary{% else %}btn-light{% endif %}" href="{% qs status='' page='' %}">Todos</a>
+  {% for k, l in statuses %}<a class="btn btn-sm {% if status == k %}btn-primary{% else %}btn-light{% endif %}" href="{% qs status=k page='' %}">{{ l }} <span class="badge text-bg-secondary">{{ by_status|get_item:k|default:0 }}</span></a>{% endfor %}
+</div>
+<div class="filters d-flex flex-wrap gap-3 align-items-end">
+  {% include "partials/period_filter.html" %}
+  <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+    <input type="hidden" name="period" value="{{ period.key }}">{% if period.key == "custom" %}<input type="hidden" name="start" value="{{ period.start|date:'Y-m-d' }}"><input type="hidden" name="end" value="{{ period.end|date:'Y-m-d' }}">{% endif %}
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    <select name="canal" class="form-select form-select-sm" style="max-width:200px" onchange="this.form.submit()"><option value="">Todos os canais</option>
+      {% for k, l in channels %}<option value="{{ k }}" {% if channel == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <input class="form-control form-control-sm" type="search" name="q" value="{{ q }}" placeholder="Nº, cliente ou ref. do canal" style="max-width:240px">
+    <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
+  </form>
+</div>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Pedido</th><th>Data</th><th>Cliente</th><th>Canal</th><th>Status</th><th class="num">Total</th><th class="num">Margem de contribuição</th></tr></thead>
+  <tbody>{% for o in page_obj %}<tr>
+    <td><a class="fw-semibold" href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a>{% if o.external_reference %}<div class="small text-secondary">{{ o.external_reference }}</div>{% endif %}</td>
+    <td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.customer|default:"—" }}</td><td class="small">{{ o.get_channel_display }}</td>
+    <td><span class="badge text-bg-{{ o.status_color }}">{{ o.get_status_display }}</span></td>
+    <td class="num fw-semibold">{{ o.total|brl }}</td>
+    <td class="num {% if o.contribution_margin|neg %}text-negative{% endif %}">{% if o.is_revenue %}{{ o.contribution_margin|brl }}{% else %}<span class="text-secondary">—</span>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="7"><div class="empty-state"><i class="bi bi-bag"></i>Nenhum pedido no período.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Financeiro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Financeiro</h1><div class="subtitle">{{ period.start|date:"d/m/Y" }} a {{ period.end|date:"d/m/Y" }}</div></div>
+  <div class="d-flex flex-wrap gap-2 align-items-end">{% include "partials/period_filter.html" %}
+    <a class="btn btn-primary btn-sm" href="{% url 'finance:entry_new' %}"><i class="bi bi-plus-lg me-1"></i>Novo lançamento</a></div>
+</div>
+{% include "finance/_nav.html" with active="overview" %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Faturamento (pedidos pagos)</div><div class="value">{{ kpis.revenue|brl }}</div><div class="hint">receita reconhecida — pendentes não entram</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Lucro bruto</div><div class="value">{{ kpis.gross_profit|brl }}</div><div class="hint">faturamento − CMV ({{ kpis.cogs|brl }})</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Margem de contribuição</div><div class="value">{{ kpis.contribution_margin|brl }}</div><div class="hint">− despesas variáveis ({{ kpis.variable_expenses|brl }})</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi {% if kpis.operating_result|neg %}negative{% else %}positive{% endif %}"><div class="label">Resultado operacional</div><div class="value">{{ kpis.operating_result|brl }}</div><div class="hint">− despesas fixas ({{ kpis.fixed_expenses|brl }})</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Entradas no caixa</div><div class="value text-positive">{{ flow.inflow|brl }}</div><div class="hint">recebimentos efetivos</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Saídas do caixa</div><div class="value text-negative">{{ flow.outflow|brl }}</div><div class="hint">pagamentos efetivos (inclui compras)</div></div></div>
+  <div class="col-6 col-xl-3"><div class="card kpi {% if flow.net|neg %}negative{% endif %}"><div class="label">Saldo do fluxo de caixa</div><div class="value">{{ flow.net|brl }}</div></div></div>
+  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="{% url 'finance:entries' 'pagar' %}?situacao=vencidos"><div class="card kpi {% if open.overdue %}negative{% endif %}"><div class="label">A pagar em aberto</div><div class="value">{{ open.payable|brl }}</div><div class="hint">{{ open.overdue|brl }} vencido · a receber {{ open.receivable|brl }}</div></div></a></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Fluxo de caixa — comparativo mensal</div><div class="card-body"><div class="chart-box"><canvas id="ch-flow"></canvas></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Despesas por categoria (competência)</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-cat"></canvas></div></div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Próximos vencimentos</div><div class="table-responsive"><table class="table table-sm">
+    <thead><tr><th>Vencimento</th><th>Descrição</th><th>Tipo</th><th class="num">Valor</th></tr></thead>
+    <tbody>{% for e in upcoming %}<tr class="{% if e.is_overdue %}text-danger{% endif %}"><td>{{ e.due_date|date:"d/m/Y" }}</td><td class="small">{{ e.description }}</td><td class="small">{{ e.get_type_display }}</td><td class="num">{{ e.amount|brl }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-center text-secondary py-3">Nada em aberto.</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Comparativo mensal</div><div class="table-responsive"><table class="table table-sm">
+    <thead><tr><th>Mês</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo</th></tr></thead>
+    <tbody>{% for c in comparison reversed %}<tr><td>{{ c.month|date:"m/Y" }}</td><td class="num">{{ c.inflow|brl }}</td><td class="num">{{ c.outflow|brl }}</td><td class="num {% if c.net|neg %}text-negative{% else %}text-positive{% endif %}">{{ c.net|brl }}</td></tr>{% endfor %}</tbody></table></div></div></div>
+</div>
+<div class="formula mt-3 small"><strong>Faturamento</strong> = vendas pagas · <strong>Lucro bruto</strong> = faturamento − CMV · <strong>Margem de contribuição</strong> = lucro bruto − despesas variáveis · <strong>Resultado operacional</strong> = margem de contribuição − despesas fixas. Compras de mercadoria afetam o caixa, mas entram no resultado como CMV quando vendidas.</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const F = {{ chart|safe }};
+  makeChart("ch-flow", {type: "bar", data: {labels: F.labels, datasets: [{label: "Entradas", data: F.inflow, color: "#0f9d58"}, {label: "Saídas", data: F.outflow, color: "#d93025"}, {label: "Saldo", data: F.net, type: "line", color: "#1d4e89"}]}}, {money: true});
+  makeChart("ch-cat", {type: "doughnut", data: {labels: [{% for c in by_category %}"{{ c.category|escapejs }}",{% endfor %}], datasets: [{data: [{% for c in by_category %}{{ c.total|stringformat:"s" }},{% endfor %}]}]}, options: {plugins: {legend: {position: "bottom"}}}}, {money: true});
+</script>
+{% endblock %}

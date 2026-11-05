@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}Importar pedidos{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Importar pedidos (CSV)</h1><a class="btn btn-outline-primary" href="{% url 'sales:import_template' %}"><i class="bi bi-download me-1"></i>Baixar modelo</a></div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card"><div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+      {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+      <button class="btn btn-primary"><i class="bi bi-upload me-1"></i>Importar</button>
+    </form>
+    {% if result %}<hr><div class="small"><strong>{{ result.created }}</strong> pedido(s) importado(s).</div>
+      {% if result.errors %}<div class="alert alert-warning mt-2 small mb-0"><ul class="mb-0">{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}{% endif %}
+  </div></div></div>
+  <div class="col-lg-6"><div class="card"><div class="card-body small text-secondary">
+    <p>Uma linha por item; linhas com o mesmo valor em <code>pedido</code> formam um único pedido. Os produtos precisam estar cadastrados (busca pelo SKU).</p>
+    <p>Colunas: <code>pedido, data, canal, status, cliente, email, telefone, sku, quantidade, preco_unitario, desconto, frete_cobrado, custo_frete, comissao, taxas, impostos, forma_pagamento</code>.</p>
+    <p class="mb-0">Canais: loja virtual, mercado livre, shopee, amazon, instagram, whatsapp, outros. Status: pendente, aguardando pagamento, pago, em separação, enviado, entregue. O estoque é reservado/baixado conforme o status. Pedidos já importados (mesmo canal e nº) são ignorados.</p>
+  </div></div></div>
+</div>
+{% endblock %}

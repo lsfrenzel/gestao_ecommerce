@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -15,7 +16,7 @@ from apps.core.permissions import company_view
 from .forms import (CompanyForm, CompanySettingsForm, InviteMemberForm, MembershipForm, OnboardingForm,
                     RedeemCouponForm, WarehouseForm)
 from .middleware import SESSION_KEY
-from .models import ApiToken, Membership, Warehouse
+from .models import ApiToken, Company, Membership, Plan, Warehouse
 from .services import CouponError, PlanLimitError, check_user_limit, create_company, redeem_coupon
 
 User = get_user_model()
@@ -26,11 +27,13 @@ def onboarding(request):
     """Cadastro da empresa: obrigatório antes de acessar a gestão."""
     if request.membership is not None and request.GET.get("nova") != "1":
         return redirect("dashboard:home")
-    form = OnboardingForm(request.POST or None)
+    form = OnboardingForm(request.POST or None, initial={"plan_choice": request.GET.get("plano", "trial")})
     if request.method == "POST" and form.is_valid():
         data = dict(form.cleaned_data)
         coupon_code = data.pop("coupon_code", "")
-        company = create_company(request.user, data, request=request)
+        plan = form.selected_plan()
+        data.pop("plan_choice", None)
+        company = create_company(request.user, data, request=request)  # começa no teste grátis
         request.session[SESSION_KEY] = company.pk
         messages.success(request, f"Empresa “{company}” cadastrada. Bem-vindo(a)!")
         if coupon_code:
@@ -41,13 +44,39 @@ def onboarding(request):
             else:
                 messages.success(request, f"Cupom {redemption.coupon.code} aplicado: "
                                           f"{redemption.coupon.discount_percent}% de desconto na assinatura.")
+        if plan is None:
+            messages.info(request, f"Seu teste grátis de {settings.FREE_TRIAL_DAYS} dias começou. "
+                                   "Assine um plano quando quiser em Configurações → Assinatura.")
+            return redirect("dashboard:home")
+        # Plano escolhido: sem teste grátis — segue direto para o pagamento.
+        company.status, company.trial_ends_at, company.plan = Company.Status.PENDING, None, plan
+        company.save(update_fields=["status", "trial_ends_at", "plan", "updated_at"])
+        return checkout_redirect(request, company, plan)
+    return render(request, "companies/onboarding.html", {"form": form, "trial_days": settings.FREE_TRIAL_DAYS})
+
+
+def checkout_redirect(request, company, plan):
+    """Cria a assinatura e envia ao checkout do Mercado Pago (ou ativa direto, se gratuita)."""
+    from apps.billing import gateway
+    from apps.billing.services import BillingError, start_checkout
+
+    try:
+        sub = start_checkout(company, plan, user=request.user, request=request)
+    except (BillingError, gateway.GatewayError) as exc:
+        messages.error(request, str(exc))
+        return redirect("companies:subscription")
+    if sub.is_active:
+        messages.success(request, f"Plano {plan.name} ativado sem custo (cupom de 100%).")
         return redirect("dashboard:home")
-    return render(request, "companies/onboarding.html", {"form": form})
+    return redirect(sub.init_point)
 
 
-@company_view("settings", admin=True)
+@company_view("settings", admin=True, billing_exempt=True)
 def subscription(request):
-    """Plano, preço da assinatura e resgate de cupom pela própria empresa."""
+    """Plano, assinatura no Mercado Pago, cobranças e resgate de cupom pela própria empresa."""
+    from apps.billing import gateway
+    from apps.billing.services import current_subscription, quote
+
     company = request.company
     form = RedeemCouponForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -59,8 +88,12 @@ def subscription(request):
             messages.success(request, f"Cupom {redemption.coupon.code} aplicado: "
                                       f"{redemption.coupon.discount_percent}% de desconto na assinatura.")
             return redirect("companies:subscription")
+    sub = current_subscription(company)
+    plans = [quote(company, p) for p in Plan.objects.filter(is_active=True).order_by("monthly_price", "name")]
     return render(request, "companies/subscription.html", {
-        "company": company, "form": form, "redemption": company.active_redemption,
+        "company": company, "form": form, "redemption": company.active_redemption, "subscription": sub,
+        "plans": plans, "payments_enabled": gateway.is_configured(), "test_mode": gateway.is_test_mode(),
+        "payments": sub.payments.all()[:12] if sub else [],
         "history": company.coupon_redemptions.select_related("coupon")[:10], "tab": "assinatura",
     })
 

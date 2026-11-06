@@ -94,6 +94,7 @@ class Company(TimeStampedModel):
     class Status(models.TextChoices):
         TRIAL = "trial", "Em teste"
         ACTIVE = "active", "Ativa"
+        PENDING = "pending", "Aguardando assinatura"
         SUSPENDED = "suspended", "Suspensa"
 
     SEGMENTS = [
@@ -149,6 +150,8 @@ class Company(TimeStampedModel):
     status = models.CharField("situação", max_length=12, choices=Status.choices, default=Status.TRIAL,
                               db_index=True)
     trial_ends_at = models.DateField("fim do período de teste", null=True, blank=True)
+    access_until = models.DateField("acesso garantido até", null=True, blank=True,
+                                    help_text="Após cancelar a assinatura, o acesso segue até o fim do período pago.")
     suspended_reason = models.CharField("motivo da suspensão", max_length=200, blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                               related_name="owned_companies", verbose_name="responsável")
@@ -170,6 +173,27 @@ class Company(TimeStampedModel):
         return self.status == self.Status.SUSPENDED
 
     @property
+    def trial_expired(self) -> bool:
+        return (self.status == self.Status.TRIAL and self.trial_ends_at is not None
+                and self.trial_ends_at < timezone.localdate())
+
+    @property
+    def trial_days_left(self) -> int | None:
+        if self.status != self.Status.TRIAL or self.trial_ends_at is None:
+            return None
+        return max(0, (self.trial_ends_at - timezone.localdate()).days)
+
+    @property
+    def has_access(self) -> bool:
+        """Acesso à gestão: assinatura ativa ou período de teste dentro do prazo."""
+        if self.status == self.Status.ACTIVE:
+            return True
+        if self.status == self.Status.TRIAL and not self.trial_expired:
+            return True
+        return (self.status == self.Status.PENDING and self.access_until is not None
+                and self.access_until >= timezone.localdate())
+
+    @property
     def address_display(self) -> str:
         parts = [self.street, self.number, self.complement, self.district, self.city, self.state]
         return ", ".join(p for p in parts if p)
@@ -179,10 +203,11 @@ class Company(TimeStampedModel):
             return True  # sem plano atribuído: sem restrição de recursos
         return feature in (self.plan.features or [])
 
-    def start_trial(self, plan: Plan | None) -> None:
+    def start_trial(self, plan: Plan | None, days: int | None = None) -> None:
+        """Teste grátis sem cartão (padrão: FREE_TRIAL_DAYS = 14 dias) com os recursos do plano informado."""
         self.plan = plan
         self.status = self.Status.TRIAL
-        days = plan.trial_days if plan else 14
+        days = days if days is not None else settings.FREE_TRIAL_DAYS
         self.trial_ends_at = timezone.localdate() + timedelta(days=days)
 
     def take_sequence(self, field: str) -> int:

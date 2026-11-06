@@ -14,7 +14,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 
 
-def _check(request, module=None, manager=False, admin=False, feature=None):
+def _check(request, module=None, manager=False, admin=False, feature=None, billing_exempt=False):
     """Retorna uma resposta de bloqueio ou None se o acesso for permitido."""
     user = request.user
     if not user.is_authenticated:
@@ -27,6 +27,9 @@ def _check(request, module=None, manager=False, admin=False, feature=None):
     company = membership.company
     if company.is_suspended:
         return render(request, "companies/suspended.html", {"company": company}, status=403)
+    if not billing_exempt and not company.has_access:
+        # Teste grátis vencido ou assinatura inativa: só a tela de assinatura fica disponível.
+        return render(request, "billing/required.html", {"company": company, "membership": membership}, status=402)
     if module:
         modules = (module,) if isinstance(module, str) else tuple(module)
         if not any(membership.can(m) for m in modules):  # basta acesso a um dos módulos
@@ -45,9 +48,11 @@ class CompanyAccessMixin(AccessMixin):
     require_manager = False
     require_admin = False
     feature: str | None = None
+    billing_exempt = False
 
     def dispatch(self, request, *args, **kwargs):
-        blocked = _check(request, self.module, self.require_manager, self.require_admin, self.feature)
+        blocked = _check(request, self.module, self.require_manager, self.require_admin, self.feature,
+                         self.billing_exempt)
         if blocked is not None:
             return blocked
         self.company = request.company
@@ -56,11 +61,11 @@ class CompanyAccessMixin(AccessMixin):
 
 
 def company_view(module: str | None = None, *, manager: bool = False, admin: bool = False,
-                 feature: str | None = None):
+                 feature: str | None = None, billing_exempt: bool = False):
     def decorator(view):
         @wraps(view)
         def wrapper(request, *args, **kwargs):
-            blocked = _check(request, module, manager, admin, feature)
+            blocked = _check(request, module, manager, admin, feature, billing_exempt)
             if blocked is not None:
                 return blocked
             return view(request, *args, **kwargs)

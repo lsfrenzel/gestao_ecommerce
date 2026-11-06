@@ -2,56 +2,95 @@
 {% load ui %}
 {% block title %}Assinatura{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>Configurações</h1><div class="subtitle">Plano, valor da assinatura e cupons de desconto</div></div></div>
+<div class="page-header"><div><h1>Configurações</h1><div class="subtitle">Plano, assinatura pelo Mercado Pago e cupons de desconto</div></div></div>
 {% include "companies/_tabs.html" %}
-<div class="row g-3">
-  <div class="col-lg-7">
-    <div class="card h-100"><div class="card-header">Sua assinatura</div><div class="card-body">
-      {% if company.plan %}
-      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-        <div>
-          <div class="small text-secondary">Plano</div>
-          <div class="fs-4 fw-bold text-navy">{{ company.plan.name }}</div>
-          <div class="small text-secondary">{{ company.get_status_display }}{% if company.status == "trial" and company.trial_ends_at %} até {{ company.trial_ends_at|date:"d/m/Y" }}{% endif %}</div>
-        </div>
-        <div class="text-end">
-          <div class="small text-secondary">Valor mensal</div>
-          {% if redemption %}<div class="text-secondary text-decoration-line-through small">{{ company.plan.monthly_price|brl }}</div>{% endif %}
-          <div class="fs-3 fw-bold {% if redemption %}text-positive{% else %}text-navy{% endif %}">{% if company.effective_monthly_price == 0 %}Grátis{% else %}{{ company.effective_monthly_price|brl }}{% endif %}</div>
-          <div class="small text-secondary">por mês</div>
-        </div>
-      </div>
-      {% if redemption %}
-      <div class="alert alert-success mt-3 mb-0 py-2"><i class="bi bi-ticket-perforated me-1"></i>
-        Cupom <strong>{{ redemption.coupon.code }}</strong> em vigor: <strong>{{ redemption.coupon.discount_percent }}% de desconto</strong>
-        {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}.</div>
-      {% endif %}
-      <hr>
-      <div class="small text-secondary">Usuários: {{ company.plan.max_users|default:"ilimitados" }} · Produtos: {{ company.plan.max_products|default:"ilimitados" }}</div>
-      <div class="mt-2">{% for f in company.plan.feature_labels %}<span class="badge badge-soft me-1 mb-1">{{ f }}</span>{% endfor %}</div>
-      {% else %}
-      <div class="text-secondary">Nenhum plano atribuído à empresa. Fale com o suporte da plataforma.</div>
-      {% endif %}
-    </div></div>
+
+{# ---- Situação atual ---- #}
+<div class="card mb-3"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
+  <div>
+    <div class="small text-secondary">Situação da conta</div>
+    {% if company.status == "active" %}
+      <div class="fs-5 fw-bold text-positive"><i class="bi bi-check-circle-fill me-1"></i>Assinatura ativa — plano {{ company.plan.name }}</div>
+    {% elif company.status == "trial" and not company.trial_expired %}
+      <div class="fs-5 fw-bold text-navy"><i class="bi bi-hourglass-split me-1"></i>Teste grátis — {{ company.trial_days_left }} dia(s) restante(s)</div>
+      <div class="small text-secondary">até {{ company.trial_ends_at|date:"d/m/Y" }}. Assinando agora, a 1ª cobrança só acontece depois do teste.</div>
+    {% elif company.has_access %}
+      <div class="fs-5 fw-bold text-warning"><i class="bi bi-exclamation-circle me-1"></i>Assinatura cancelada — acesso até {{ company.access_until|date:"d/m/Y" }}</div>
+    {% else %}
+      <div class="fs-5 fw-bold text-negative"><i class="bi bi-lock-fill me-1"></i>{% if company.trial_expired %}Teste grátis encerrado{% else %}Sem assinatura ativa{% endif %}</div>
+      <div class="small text-secondary">Escolha um plano abaixo para liberar o acesso ao sistema.</div>
+    {% endif %}
   </div>
+  {% if subscription %}
+  <div class="text-end">
+    <div class="small text-secondary">Assinatura no Mercado Pago</div>
+    <span class="badge text-bg-{{ subscription.status_color }}">{{ subscription.get_status_display }}</span>
+    <div class="fw-semibold mt-1">{% if subscription.amount %}{{ subscription.amount|brl }}/mês{% else %}Grátis{% endif %}
+      {% if subscription.discount_percent %}<span class="text-secondary text-decoration-line-through small ms-1">{{ subscription.full_amount|brl }}</span>{% endif %}</div>
+    {% if subscription.next_payment_date %}<div class="small text-secondary">próxima cobrança: {{ subscription.next_payment_date|date:"d/m/Y" }}</div>
+    {% elif subscription.first_charge_date %}<div class="small text-secondary">1ª cobrança: {{ subscription.first_charge_date|date:"d/m/Y" }}</div>{% endif %}
+    <div class="d-flex gap-2 justify-content-end mt-2">
+      {% if subscription.status == "pending" and subscription.init_point %}<a class="btn btn-sm btn-brand" href="{{ subscription.init_point }}">Concluir pagamento</a>{% endif %}
+      {% if subscription.mp_preapproval_id %}<form method="post" action="{% url 'billing:refresh' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">Verificar pagamento</button></form>{% endif %}
+      {% if subscription.status != "cancelled" %}<form method="post" action="{% url 'billing:cancel' %}" data-confirm="Cancelar a assinatura? Nenhuma nova cobrança será feita e o acesso continua até o fim do período pago.">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Cancelar assinatura</button></form>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div></div>
+
+{# ---- Planos ---- #}
+<h2 class="h6 text-uppercase text-secondary mb-2">Planos</h2>
+{% if not payments_enabled %}<div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle me-1"></i>Pagamento online indisponível no momento (credenciais do Mercado Pago não configuradas). Fale com o suporte.</div>{% endif %}
+{% if test_mode %}<div class="alert alert-info py-2 small"><i class="bi bi-bug me-1"></i>Mercado Pago em <strong>modo de teste</strong>: use um usuário comprador de teste no checkout.</div>{% endif %}
+<div class="row g-3 mb-3">
+  {% for q in plans %}{% with plan=q.plan %}
+  <div class="col-md-6 col-xl-4"><div class="card h-100 {% if subscription.plan_id == plan.pk and subscription.is_active %}border-success{% endif %}"><div class="card-body d-flex flex-column">
+    <div class="d-flex justify-content-between align-items-start"><h3 class="h5 text-navy mb-1">{{ plan.name }}</h3>
+      {% if subscription.plan_id == plan.pk and subscription.is_active %}<span class="badge status-ok">Seu plano</span>{% endif %}</div>
+    <div class="mb-2">
+      {% if q.discount_percent %}<span class="text-secondary text-decoration-line-through small">{{ q.full_amount|brl }}</span> {% endif %}
+      <span class="fs-4 fw-bold">{% if q.free %}Grátis{% else %}{{ q.amount|brl }}{% endif %}</span>{% if not q.free %}<span class="text-secondary small">/mês</span>{% endif %}
+      {% if q.discount_percent %}<div class="small text-positive">cupom de {{ q.discount_percent }}%{% if q.discount_until %} até {{ q.discount_until|date:"d/m/Y" }}{% endif %}</div>{% endif %}
+    </div>
+    <p class="small text-secondary">{{ plan.description }}</p>
+    <ul class="small mb-3 ps-3"><li>Usuários: {{ plan.max_users|default:"ilimitados" }}</li><li>Produtos: {{ plan.max_products|default:"ilimitados" }}</li>
+      {% for f in plan.feature_labels %}<li>{{ f }}</li>{% endfor %}</ul>
+    {% if q.first_charge and not q.free %}<div class="small text-secondary mb-2"><i class="bi bi-calendar-event me-1"></i>1ª cobrança em {{ q.first_charge|date:"d/m/Y" }}</div>{% endif %}
+    <form method="post" action="{% url 'billing:subscribe' %}" class="mt-auto">{% csrf_token %}
+      <input type="hidden" name="plan" value="{{ plan.pk }}">
+      {% if subscription.plan_id == plan.pk and subscription.is_active %}
+        <button class="btn btn-outline-secondary w-100" disabled>Plano atual</button>
+      {% elif not q.free and not payments_enabled %}
+        <button class="btn btn-outline-secondary w-100" disabled>Indisponível</button>
+      {% else %}
+        <button class="btn btn-brand w-100">{% if q.free %}Ativar plano{% elif subscription.is_active %}Mudar para este plano{% else %}Assinar com Mercado Pago{% endif %}</button>
+      {% endif %}
+    </form>
+  </div></div></div>
+  {% endwith %}{% empty %}<div class="col-12"><div class="card"><div class="empty-state">Nenhum plano disponível.</div></div></div>{% endfor %}
+</div>
+
+<div class="row g-3">
   <div class="col-lg-5">
-    <div class="card mb-3"><div class="card-header">Resgatar cupom</div><div class="card-body">
+    <div class="card mb-3"><div class="card-header">Cupom de desconto</div><div class="card-body">
       {% if redemption %}
-      <p class="small text-secondary mb-0">A empresa já tem um cupom em vigor. Para trocar de cupom, fale com o suporte da plataforma.</p>
+      <div class="alert alert-success py-2 small mb-0"><i class="bi bi-ticket-perforated me-1"></i>Cupom <strong>{{ redemption.coupon.code }}</strong>: {{ redemption.coupon.discount_percent }}% de desconto {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}. O desconto já aparece nos preços acima.</div>
       {% else %}
       <form method="post" novalidate>{% csrf_token %}
         {% for field in form %}{% include "partials/field.html" %}{% endfor %}
         <button class="btn btn-primary"><i class="bi bi-ticket-perforated me-1"></i>Aplicar cupom</button>
       </form>
+      <div class="small text-secondary mt-2">Aplique o cupom antes de assinar para que o desconto entre no valor da assinatura.</div>
       {% endif %}
     </div></div>
-    {% if history %}
-    <div class="card"><div class="card-header">Histórico de cupons</div><ul class="list-group list-group-flush small">
-      {% for r in history %}<li class="list-group-item d-flex justify-content-between"><span><strong>{{ r.coupon.code }}</strong> · {{ r.coupon.discount_percent }}%</span>
-        <span class="text-secondary">{{ r.created_at|date:"d/m/Y" }} · {% if r.is_current %}em vigor{% else %}encerrado{% endif %}</span></li>{% endfor %}
-    </ul></div>
-    {% endif %}
+  </div>
+  <div class="col-lg-7">
+    <div class="card"><div class="card-header">Cobranças</div><div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Data</th><th>Situação</th><th class="num">Valor</th></tr></thead>
+      <tbody>{% for p in payments %}<tr><td>{{ p.debit_date|date:"d/m/Y"|default:"—" }}</td><td>{{ p.status_label }}</td><td class="num">{{ p.amount|brl }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="text-secondary text-center py-3">Nenhuma cobrança registrada ainda.</td></tr>{% endfor %}</tbody>
+    </table></div></div>
   </div>
 </div>
-<p class="small text-secondary mt-3"><i class="bi bi-info-circle me-1"></i>A cobrança recorrente ainda não está integrada: os valores acima são informativos.</p>
+<p class="small text-secondary mt-3"><i class="bi bi-shield-lock me-1"></i>Os dados do cartão são informados diretamente no Mercado Pago — não passam nem ficam guardados neste sistema.</p>
 {% endblock %}

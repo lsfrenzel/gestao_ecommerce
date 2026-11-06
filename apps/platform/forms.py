@@ -12,7 +12,7 @@ class PlanForm(StyledFormMixin, forms.ModelForm):
 
     class Meta:
         model = Plan
-        fields = ["name", "description", "monthly_price", "max_users", "max_products", "features", "trial_days",
+        fields = ["name", "description", "monthly_price", "max_users", "max_products", "features",
                   "is_active", "is_default"]
         widgets = {"description": forms.Textarea(attrs={"rows": 2})}
 

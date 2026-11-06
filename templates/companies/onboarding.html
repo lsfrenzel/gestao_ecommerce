@@ -1,11 +1,43 @@
 {% extends "accounts/auth_base.html" %}
+{% load ui %}
 {% block title %}Cadastre sua empresa{% endblock %}
 {% block box_class %}wide{% endblock %}
 {% block auth %}
 <h1 class="auth-title">Cadastre sua empresa</h1>
-<p class="auth-subtitle">Os dados da empresa ficam isolados: somente os usuários que você convidar terão acesso.</p>
+<p class="auth-subtitle">Escolha como começar e informe os dados da empresa. Os dados ficam isolados: só os usuários que você convidar terão acesso.</p>
 <form method="post" novalidate>{% csrf_token %}
   {% include "partials/form_errors.html" %}
+
+  <div class="mb-1 fw-semibold small text-uppercase text-secondary">1. Plano</div>
+  <div class="plan-options mb-2" role="radiogroup" aria-label="Plano">
+    <label class="plan-option">
+      <input type="radio" name="plan_choice" value="trial" {% if form.plan_choice.value == "trial" or not form.plan_choice.value %}checked{% endif %}>
+      <span class="plan-card trial">
+        <span class="plan-badge">Recomendado para começar</span>
+        <span class="plan-name">Teste grátis</span>
+        <span class="plan-price">R$ 0 <small>por {{ trial_days }} dias</small></span>
+        <span class="plan-desc">Acesso completo, sem cartão de crédito. Assine um plano quando quiser.</span>
+      </span>
+    </label>
+    {% for plan in form.plans %}
+    <label class="plan-option {% if plan.monthly_price and not form.payments_enabled %}disabled{% endif %}">
+      <input type="radio" name="plan_choice" value="{{ plan.pk }}" {% if form.plan_choice.value == plan.pk|stringformat:"s" %}checked{% endif %}
+             {% if plan.monthly_price and not form.payments_enabled %}disabled{% endif %}>
+      <span class="plan-card">
+        {% if plan.is_default %}<span class="plan-badge">Mais escolhido</span>{% endif %}
+        <span class="plan-name">{{ plan.name }}</span>
+        <span class="plan-price">{% if plan.monthly_price %}{{ plan.monthly_price|brl }} <small>/mês</small>{% else %}Grátis{% endif %}</span>
+        <span class="plan-desc">{{ plan.description|default:"" }}</span>
+        <span class="plan-limits">{{ plan.max_users|default:"Usuários ilimitados" }}{% if plan.max_users %} usuário(s){% endif %} · {{ plan.max_products|default:"produtos ilimitados" }}{% if plan.max_products %} produtos{% endif %}</span>
+      </span>
+    </label>
+    {% endfor %}
+  </div>
+  {% if not form.payments_enabled %}<div class="small text-secondary mb-3"><i class="bi bi-info-circle me-1"></i>A assinatura online dos planos pagos ainda não está disponível. Comece pelo teste grátis.</div>
+  {% else %}<div class="small text-secondary mb-3"><i class="bi bi-lock me-1"></i>Planos pagos: pagamento mensal recorrente pelo <strong>Mercado Pago</strong>. Cancele quando quiser.</div>{% endif %}
+  {% for e in form.plan_choice.errors %}<div class="invalid-feedback d-block mb-2">{{ e }}</div>{% endfor %}
+
+  <div class="mb-1 mt-3 fw-semibold small text-uppercase text-secondary">2. Dados da empresa</div>
   <div class="row">
     {% include "partials/field.html" with field=form.trade_name %}
     {% include "partials/field.html" with field=form.legal_name col="col-md-7" %}
@@ -26,7 +58,22 @@
     </div>
   </details>
   <div class="row">{% include "partials/field.html" with field=form.coupon_code %}</div>
-  <button class="btn btn-brand w-100">Cadastrar empresa e começar</button>
+  <button class="btn btn-brand w-100" id="onboarding-submit">Começar teste grátis</button>
 </form>
 <form method="post" action="{% url 'accounts:logout' %}" class="text-center mt-3">{% csrf_token %}<button class="btn btn-link btn-sm">Sair</button></form>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    const btn = document.getElementById("onboarding-submit");
+    function sync() {
+      const sel = document.querySelector('input[name="plan_choice"]:checked');
+      const paid = sel && sel.value !== "trial" && !sel.closest(".plan-option").querySelector(".plan-price").textContent.includes("Grátis");
+      btn.innerHTML = sel && sel.value === "trial" ? "Começar teste grátis"
+        : (paid ? 'Continuar para o pagamento <i class="bi bi-arrow-right ms-1"></i>' : "Cadastrar empresa e começar");
+    }
+    document.querySelectorAll('input[name="plan_choice"]').forEach((r) => r.addEventListener("change", sync));
+    sync();
+  })();
+</script>
 {% endblock %}

@@ -40,7 +40,7 @@ def _authenticate(request):
     raw = header[7:].strip()
     token = (ApiToken.objects.select_related("company").filter(key_hash=ApiToken.hash(raw), is_active=True)
              .first())
-    if token is None or token.company.is_suspended:
+    if token is None or token.company.is_suspended or not token.company.has_access:
         return None
     ApiToken.objects.filter(pk=token.pk).update(last_used_at=timezone.now())
     return token

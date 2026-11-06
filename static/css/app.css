@@ -183,6 +183,25 @@ a { color: var(--navy-3); }
   --bs-btn-active-bg: #c81818; --bs-btn-active-border-color: #c81818; --bs-btn-focus-shadow-rgb: 255, 49, 49;
   --bs-btn-disabled-bg: var(--brand); --bs-btn-disabled-border-color: var(--brand);
   font-weight: 600; border-radius: 10px; padding: .72rem 1rem; box-shadow: 0 8px 20px -10px rgba(255, 49, 49, .7); }
+/* Escolha de plano (cadastro da empresa e assinatura) */
+.plan-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .75rem; }
+.plan-option { position: relative; cursor: pointer; margin: 0; }
+.plan-option input { position: absolute; opacity: 0; pointer-events: none; }
+.plan-card { display: flex; flex-direction: column; gap: .25rem; height: 100%; padding: 1rem 1.05rem; border-radius: 12px;
+  border: 1.5px solid #e2e8f0; background: #fff; transition: border-color .15s, box-shadow .15s; }
+.plan-option:hover .plan-card { border-color: #cbd5e1; }
+.plan-option input:checked + .plan-card { border-color: var(--brand); box-shadow: 0 0 0 .2rem rgba(255, 49, 49, .12); }
+.plan-option input:focus-visible + .plan-card { outline: 2px solid var(--brand); outline-offset: 2px; }
+.plan-option.disabled { cursor: not-allowed; opacity: .55; }
+.plan-card.trial { background: linear-gradient(160deg, #fff, var(--brand-soft)); }
+.plan-badge { align-self: flex-start; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--brand-dark); background: var(--brand-soft); border-radius: 999px; padding: .15rem .55rem; margin-bottom: .2rem; }
+.plan-name { font-weight: 700; color: var(--ink); font-size: 1.02rem; }
+.plan-price { font-size: 1.35rem; font-weight: 700; color: var(--ink); }
+.plan-price small { font-size: .78rem; font-weight: 500; color: var(--muted); }
+.plan-desc { font-size: .8rem; color: var(--muted); }
+.plan-limits { font-size: .74rem; color: #94a3b8; margin-top: auto; padding-top: .35rem; }
+
 .auth-divider { display: flex; align-items: center; gap: .75rem; color: #94a3b8; font-size: .8rem; margin: 1.5rem 0; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: #e5e9f0; }
 .auth-secure { font-size: .76rem; color: #94a3b8; text-align: center; margin-top: 1.75rem; }

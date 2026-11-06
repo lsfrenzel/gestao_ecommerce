@@ -200,6 +200,34 @@ O SUPER ADMIN acessa `/plataforma/`. Ele também pode cadastrar uma empresa pró
   bloqueios, consultas do SUPER ADMIN a empresas, exportações e ações LGPD.
 - Exportações CSV neutralizam fórmulas (`=`, `+`, `-`, `@`); uploads de imagem validados pelo conteúdo.
 
+## Assinaturas (Mercado Pago)
+
+As assinaturas dos planos são cobradas pelo **Mercado Pago — Assinaturas** (cobrança mensal recorrente no cartão;
+o cliente autoriza no checkout do Mercado Pago e os dados do cartão nunca passam pelo sistema).
+
+**Fluxo**
+1. No cadastro da empresa aparecem os planos ativos e a opção **Teste grátis** (14 dias, sem cartão — `FREE_TRIAL_DAYS`).
+2. Plano pago → o sistema cria a assinatura (`POST /preapproval`) e redireciona ao checkout do Mercado Pago.
+3. O acesso é liberado quando o Mercado Pago confirma `authorized` — pelo **webhook** ou pela consulta feita no retorno
+   do checkout. O retorno do navegador sozinho nunca libera o acesso.
+4. Fim do teste grátis sem assinatura → a gestão fica bloqueada (dados preservados) até assinar em
+   Configurações → Assinatura. Quem assina durante o teste só é cobrado depois que o teste termina.
+5. Cancelamento: nenhuma nova cobrança; o acesso continua até a data da próxima cobrança já paga.
+6. Cupons: 50% reduz o valor mensal (pelo prazo do cupom); 100% permanente ativa o plano sem cobrança; 100% com prazo
+   adia a 1ª cobrança para depois do prazo.
+
+**Configuração**
+1. Em https://www.mercadopago.com.br/developers/panel/app crie uma aplicação e copie as credenciais para
+   `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_PUBLIC_KEY` (credenciais de teste começam com `TEST-`).
+2. Em *Webhooks*, cadastre a URL `https://SEU-DOMINIO/assinatura/webhook/mercadopago/` com os eventos
+   **Planos e assinaturas** (assinaturas e pagamentos autorizados) e copie a assinatura secreta para
+   `MERCADOPAGO_WEBHOOK_SECRET`.
+3. `SITE_URL` precisa ser o endereço HTTPS público (é a página de retorno do checkout).
+4. Testes: use credenciais de teste e, no checkout, um **usuário comprador de teste** do Mercado Pago (o e-mail do
+   pagador não pode ser o da conta vendedora).
+5. Recomendado: Railway Cron diário com `python manage.py sync_subscriptions` (reconcilia situações e encerra descontos
+   de cupom vencidos).
+
 ## API (integrações futuras)
 
 Crie um token em Configurações → Integrações. Envie `Authorization: Bearer <token>`.
@@ -212,5 +240,5 @@ Não há integração automática com marketplaces: a API é o ponto de entrada 
 
 ## Limitações conhecidas
 
-- Cobrança recorrente dos planos não está integrada a gateway (estrutura de planos pronta; nenhuma cobrança é simulada).
+- Assinaturas aceitam cartão (recorrência do Mercado Pago); Pix/boleto recorrentes não são suportados pelo recurso.
 - Variações de produto (tamanho/cor) têm estrutura no modelo, mas ainda sem tela dedicada.

@@ -1,0 +1,10 @@
+{% extends "accounts/auth_base.html" %}
+{% block title %}Assinatura necessária{% endblock %}
+{% block auth %}
+<h1 class="auth-title">{% if company.trial_expired %}Seu teste grátis terminou{% else %}Assinatura necessária{% endif %}</h1>
+<p class="auth-subtitle">Os dados de <strong>{{ company }}</strong> estão preservados. {% if membership.is_admin %}Escolha um plano para continuar usando o sistema.{% else %}Peça ao administrador da empresa para assinar um plano.{% endif %}</p>
+{% if membership.is_admin %}
+<a class="btn btn-brand w-100" href="{% url 'companies:subscription' %}">Ver planos e assinar <i class="bi bi-arrow-right ms-1"></i></a>
+{% endif %}
+<form method="post" action="{% url 'accounts:logout' %}" class="text-center mt-3">{% csrf_token %}<button class="btn btn-link btn-sm">Sair</button></form>
+{% endblock %}

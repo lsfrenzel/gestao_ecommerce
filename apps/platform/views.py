@@ -23,6 +23,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import LoginEvent
 from apps.accounts.services import send_access_email, set_provisional_password
+from apps.billing.services import current_subscription
 from apps.companies.models import Company, Coupon, CouponRedemption, Membership, Plan
 from apps.companies.services import CouponError, PlanLimitError, check_user_limit, redeem_coupon, remove_coupon
 from apps.core.audit import log_action
@@ -209,6 +210,7 @@ def company_detail(request, pk):
         "logs": AuditLog.objects.filter(company=company, platform_scope=True)[:15],
         "redemption": company.active_redemption, "coupon_form": ApplyCouponForm(),
         "coupon_history": company.coupon_redemptions.select_related("coupon")[:10],
+        "subscription": current_subscription(company),
     })
 
 
@@ -365,8 +367,8 @@ def coupon_form(request, pk=None):
         return redirect("platform:coupon_detail", pk=obj.pk)
     return render(request, "platform/form.html", {
         "form": form, "title": f"Editar cupom {coupon.code}" if coupon else "Novo cupom", "back": "platform:coupons",
-        "intro": "O desconto incide sobre o preço mensal do plano da empresa. Não há cobrança automática: o valor "
-                 "com desconto fica registrado para a futura integração com o gateway de pagamentos."})
+        "intro": "O desconto incide sobre o valor mensal cobrado pelo Mercado Pago quando a empresa assina com o "
+                 "cupom aplicado. 100% permanente ativa o plano sem cobrança; 100% com prazo adia a 1ª cobrança."})
 
 
 @superadmin_required

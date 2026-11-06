@@ -2,7 +2,7 @@
 {% load ui %}
 {% block title %}Planos{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>Planos SaaS</h1><div class="subtitle">Estrutura preparada para integração futura com gateway de pagamentos (nenhuma cobrança é gerada)</div></div>
+<div class="page-header"><div><h1>Planos SaaS</h1><div class="subtitle">Planos ativos aparecem no cadastro e são cobrados mensalmente pelo Mercado Pago. Mudanças de preço valem para novas assinaturas</div></div>
   <a class="btn btn-primary" href="{% url 'platform:plan_new' %}"><i class="bi bi-plus-lg me-1"></i>Novo plano</a></div>
 <div class="row g-3">
   {% for p in plans %}<div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-body">
@@ -10,7 +10,7 @@
       <span>{% if p.is_default %}<span class="badge badge-soft">padrão</span>{% endif %} {% if not p.is_active %}<span class="badge text-bg-secondary">inativo</span>{% endif %}</span></div>
     <div class="fs-4 fw-bold my-2">{{ p.monthly_price|brl }}<span class="fs-6 text-secondary fw-normal">/mês</span></div>
     <p class="small text-secondary">{{ p.description }}</p>
-    <ul class="small mb-2"><li>Usuários: {{ p.max_users|default:"ilimitados" }}</li><li>Produtos: {{ p.max_products|default:"ilimitados" }}</li><li>Teste: {{ p.trial_days }} dias</li></ul>
+    <ul class="small mb-2"><li>Usuários: {{ p.max_users|default:"ilimitados" }}</li><li>Produtos: {{ p.max_products|default:"ilimitados" }}</li></ul>
     <div class="small">{% for f in p.feature_labels %}<span class="badge badge-soft me-1 mb-1">{{ f }}</span>{% endfor %}</div>
     <div class="small text-secondary mt-2">{{ p.companies_n }} empresa(s)</div>
   </div><div class="card-footer bg-transparent"><a class="btn btn-sm btn-outline-primary" href="{% url 'platform:plan_edit' p.pk %}">Editar</a></div></div></div>

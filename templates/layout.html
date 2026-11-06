@@ -102,8 +102,12 @@
 
     <main class="content">
       {% include "partials/messages.html" %}
-      {% if current_company.status == "trial" and current_company.trial_ends_at %}
-      <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>Período de teste do plano {{ current_company.plan|default:"" }} até {{ current_company.trial_ends_at|date:"d/m/Y" }}.</div>
+      {% if current_company.status == "trial" and current_company.trial_ends_at and not current_company.trial_expired %}
+      <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2"><i class="bi bi-hourglass-split"></i>
+        <span>Teste grátis: <strong>{{ current_company.trial_days_left }} dia(s) restante(s)</strong> (até {{ current_company.trial_ends_at|date:"d/m/Y" }}).</span>
+        {% if current_membership.is_admin %}<a class="btn btn-sm btn-brand py-0 ms-auto" href="{% url 'companies:subscription' %}">Assinar agora</a>{% endif %}</div>
+      {% elif current_company.status == "pending" and current_company.access_until %}
+      <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-circle me-1"></i>Assinatura cancelada: acesso até {{ current_company.access_until|date:"d/m/Y" }}.{% if current_membership.is_admin %} <a href="{% url 'companies:subscription' %}">Reativar</a>{% endif %}</div>
       {% endif %}
       {% block content %}{% endblock %}
     </main>

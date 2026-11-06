@@ -8,7 +8,10 @@ CSP = (
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
     "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; "
     "img-src 'self' data: blob: https:; "
-    "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; "
+    # form-action também vale para o redirecionamento após o envio: libera o checkout do Mercado Pago.
+    "form-action 'self' https://www.mercadopago.com.br https://*.mercadopago.com.br https://*.mercadopago.com "
+    "https://*.mercadolivre.com https://*.mercadolibre.com"
 )
 
 

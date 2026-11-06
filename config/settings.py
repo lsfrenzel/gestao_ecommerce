@@ -88,6 +88,15 @@ _default_site = f"https://{env('RAILWAY_PUBLIC_DOMAIN')}" if env("RAILWAY_PUBLIC
 SITE_URL = (env("SITE_URL") or _default_site).rstrip("/")
 PLATFORM_NAME = env("PLATFORM_NAME", "FrenzelTech Ecommerce")
 
+# ---------------------------------------------------------------------------
+# Assinaturas — Mercado Pago (Mercado Livre). Credenciais em Suas integrações → Credenciais.
+# ---------------------------------------------------------------------------
+MERCADOPAGO_ACCESS_TOKEN = env("MERCADOPAGO_ACCESS_TOKEN").strip()
+MERCADOPAGO_PUBLIC_KEY = env("MERCADOPAGO_PUBLIC_KEY").strip()
+# Assinatura secreta do webhook (Suas integrações → Webhooks). Recomendado em produção.
+MERCADOPAGO_WEBHOOK_SECRET = env("MERCADOPAGO_WEBHOOK_SECRET").strip()
+FREE_TRIAL_DAYS = env_int("FREE_TRIAL_DAYS", 14)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -103,6 +112,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.companies",
     "apps.platform",
+    "apps.billing",
     "apps.products",
     "apps.pricing",
     "apps.inventory",

@@ -17,9 +17,13 @@
         {% for field in form %}{% include "partials/field.html" %}{% endfor %}
         <button class="btn btn-primary">Salvar</button>
       </form>
-      <div class="small text-secondary mt-2">Cobrança recorrente não está integrada: alterar o plano ou aplicar cupom não gera cobrança.</div>
+      <div class="small text-secondary mt-2">Alterar o plano aqui não muda a assinatura no Mercado Pago: a empresa assina ou troca de plano em Configurações → Assinatura. O cupom aplicado vale para a próxima assinatura feita pela empresa.</div>
     </div></div>
     <div class="card mb-3"><div class="card-header">Assinatura e cupom</div><div class="card-body">
+      {% if subscription %}<div class="small mb-2">Mercado Pago: <span class="badge text-bg-{{ subscription.status_color }}">{{ subscription.get_status_display }}</span>
+        plano {{ subscription.plan.name }} · {{ subscription.amount|brl }}/mês{% if subscription.next_payment_date %} · próxima cobrança {{ subscription.next_payment_date|date:"d/m/Y" }}{% endif %}
+        {% if subscription.mp_preapproval_id %}<div class="text-secondary">ID {{ subscription.mp_preapproval_id }}</div>{% endif %}</div>
+      {% else %}<div class="small text-secondary mb-2">Sem assinatura no Mercado Pago{% if company.status == "trial" %} — em teste até {{ company.trial_ends_at|date:"d/m/Y" }}{% endif %}.</div>{% endif %}
       <div class="d-flex justify-content-between align-items-baseline">
         <span class="small text-secondary">Valor mensal{% if company.plan %} ({{ company.plan.name }}){% endif %}</span>
         <span>{% if redemption %}<span class="text-secondary text-decoration-line-through small me-1">{{ company.plan.monthly_price|brl }}</span>{% endif %}

@@ -6,7 +6,7 @@ from django import forms
 
 from apps.core.forms import StyledFormMixin
 
-from .models import MODULES, Company, Membership, Warehouse
+from .models import MODULES, Company, Membership, Plan, Warehouse
 
 UF_CHOICES = [("", "—")] + [(uf, uf) for uf in (
     "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split())]
@@ -68,7 +68,29 @@ class CompanyForm(StyledFormMixin, forms.ModelForm):
 
 
 class OnboardingForm(CompanyForm):
+    TRIAL = "trial"
+
+    plan_choice = forms.ChoiceField(label="Escolha como começar", initial=TRIAL, widget=forms.RadioSelect,
+                                    required=False)  # vazio = teste grátis
     coupon_code = forms.CharField(label="Cupom de desconto (opcional)", max_length=30, required=False)
+
+    def __init__(self, *args, **kwargs):
+        from apps.billing import gateway
+
+        super().__init__(*args, **kwargs)
+        self.payments_enabled = gateway.is_configured()
+        self.plans = list(Plan.objects.filter(is_active=True).order_by("monthly_price", "name"))
+        choices = [(self.TRIAL, "Teste grátis")]
+        for plan in self.plans:
+            if plan.monthly_price == 0 or self.payments_enabled:
+                choices.append((str(plan.pk), plan.name))
+        self.fields["plan_choice"].choices = choices
+
+    def selected_plan(self):
+        value = self.cleaned_data.get("plan_choice")
+        if value in (None, "", self.TRIAL):
+            return None
+        return next((p for p in self.plans if str(p.pk) == value), None)
 
     def clean_coupon_code(self):
         from .models import Coupon

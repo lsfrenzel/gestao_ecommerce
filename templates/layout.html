@@ -14,6 +14,7 @@
       {% if "sales" in allowed_modules %}<a class="nav-link {% if path|slice:':8' == '/vendas/' %}active{% endif %}" href="{% url 'sales:list' %}"><i class="bi bi-bag-check"></i>Vendas</a>{% endif %}
       {% if "customers" in allowed_modules %}<a class="nav-link {% if path|slice:':10' == '/clientes/' %}active{% endif %}" href="{% url 'customers:list' %}"><i class="bi bi-people"></i>Clientes</a>{% endif %}
       {% if "marketing" in allowed_modules %}<a class="nav-link {% if path|slice:':11' == '/marketing/' %}active{% endif %}" href="{% url 'marketing:list' %}"><i class="bi bi-megaphone"></i>Marketing</a>{% endif %}
+      {% if "research" in allowed_modules %}<a class="nav-link {% if path|slice:':10' == '/pesquisa/' %}active{% endif %}" href="{% url 'research:trends' %}"><i class="bi bi-graph-up-arrow"></i>Pesquisa</a>{% endif %}
       <div class="nav-section">Operação</div>
       {% if "inventory" in allowed_modules %}<a class="nav-link {% if path|slice:':9' == '/estoque/' and 'ponto-de-pedido' not in path %}active{% endif %}" href="{% url 'inventory:overview' %}"><i class="bi bi-boxes"></i>Estoque{% if alerts.out %}<span class="badge rounded-pill badge-alert">{{ alerts.out }}</span>{% endif %}</a>{% endif %}
       {% if "reorder" in allowed_modules %}<a class="nav-link {% if 'ponto-de-pedido' in path %}active{% endif %}" href="{% url 'inventory:reorder' %}"><i class="bi bi-arrow-repeat"></i>Ponto de pedido</a>{% endif %}

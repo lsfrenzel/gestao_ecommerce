@@ -22,7 +22,7 @@ MODULE_HOME = {
     "products": "products:list", "pricing": "pricing:calculator", "inventory": "inventory:overview",
     "reorder": "inventory:reorder", "suppliers": "purchasing:suppliers", "purchasing": "purchasing:orders",
     "sales": "sales:list", "customers": "customers:list", "finance": "finance:overview",
-    "marketing": "marketing:list", "reports": "reports:index", "settings": "companies:settings",
+    "marketing": "marketing:list", "research": "research:trends", "reports": "reports:index", "settings": "companies:settings",
 }
 
 

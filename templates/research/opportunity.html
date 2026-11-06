@@ -1,0 +1,99 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Simulação de oportunidade{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><a class="small" href="{% url 'research:trends' %}"><i class="bi bi-arrow-left"></i> Pesquisa de mercado</a>
+    <h1>Simulação de oportunidade</h1>
+    <div class="subtitle">{% if simulation %}Simulação salva em {{ simulation.created_at|date:"d/m/Y H:i" }}{% if simulation.created_by %} por {{ simulation.created_by }}{% endif %}{% else %}O produto só é aprovado com margem líquida mínima de 30% depois de todos os custos estimados{% endif %}</div></div>
+  <a class="btn btn-outline-primary" href="{% url 'research:simulations' %}"><i class="bi bi-folder2-open me-1"></i>Simulações salvas</a>
+</div>
+<div class="row g-3">
+  <div class="col-xl-5">
+    <div hx-post="{% url 'research:opportunity' %}" hx-target="#results" hx-include="#opp-form" hx-trigger="input changed delay:600ms, change" hx-indicator="#calc-indicator">
+    <form method="post" id="opp-form" action="{% url 'research:opportunity' %}" novalidate>
+      {% csrf_token %}
+      {{ form.keyword }}{{ form.trend_score }}{{ form.trend_direction }}
+      <div class="card mb-3"><div class="card-header">1. Produto</div><div class="card-body"><div class="row">
+        {% include "partials/field.html" with field=form.name %}
+        {% if trend %}
+        <div class="col-12 mb-3"><span class="badge badge-soft"><i class="bi bi-graph-up-arrow me-1"></i>Google Trends: índice {{ trend.score }}{% if trend.label %} · {{ trend.label|lower }}{% endif %}</span></div>
+        {% endif %}
+        {% include "partials/field.html" with field=form.origin %}
+        {% include "partials/field.html" with field=form.channel %}
+      </div></div></div>
+
+      <div class="card mb-3"><div class="card-header">2. Custo, preço e lote</div><div class="card-body"><div class="row">
+        <div data-origin="national" class="col-12 p-0"><div class="row m-0">{% include "partials/field.html" with field=form.unit_cost_brl %}</div></div>
+        <div data-origin="international" class="col-12 p-0"><div class="row m-0">
+          {% include "partials/field.html" with field=form.unit_cost_usd %}
+          {% include "partials/field.html" with field=form.regime %}
+        </div></div>
+        {% include "partials/field.html" with field=form.sale_price col="col-sm-6" %}
+        {% include "partials/field.html" with field=form.quantity col="col-sm-6" %}
+        {% include "partials/field.html" with field=form.target_margin_pct %}
+      </div></div></div>
+
+      <details class="card mb-3 assumptions" {% if form.errors %}open{% endif %}>
+        <summary class="card-header">3. Premissas estimadas automaticamente <span class="small text-secondary fw-normal">(opcional — preencha só o que quiser ajustar)</span></summary>
+        <div class="card-body"><div class="row">
+          <div class="col-12 small text-secondary mb-2">Campos em branco usam estimativas automáticas: alíquota da empresa, tarifas de referência do canal, histórico das suas campanhas, cotação do dólar do dia e regras de importação. Sem pesquisa prévia, a tendência do Google Trends é buscada ao salvar.</div>
+          <div class="col-12 fw-semibold small mb-2">Venda</div>
+          {% include "partials/field.html" with field=form.tax_pct col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.commission_pct col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.fixed_fee col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.payment_fee_pct col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.marketing_pct col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.returns_pct col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.packaging col="col-sm-6" %}
+          {% include "partials/field.html" with field=form.shipping col="col-sm-6" %}
+          <div data-origin="national" class="col-12 p-0"><div class="row m-0">
+            <div class="col-12 fw-semibold small mb-2">Compra nacional</div>
+            {% include "partials/field.html" with field=form.inbound_freight_pct col="col-sm-6" %}
+          </div></div>
+          <div data-origin="international" class="col-12 p-0"><div class="row m-0">
+            <div class="col-12 fw-semibold small mb-2">Importação</div>
+            {% include "partials/field.html" with field=form.exchange_rate col="col-sm-6" %}
+            {% include "partials/field.html" with field=form.intl_freight_usd col="col-sm-6" %}
+            {% include "partials/field.html" with field=form.fx_fee_pct col="col-sm-6" %}
+            {% include "partials/field.html" with field=form.icms_pct col="col-sm-6" %}
+            {% include "partials/field.html" with field=form.customs_fees col="col-sm-6" %}
+            <div data-regime="formal" class="col-12 p-0"><div class="row m-0">
+              {% include "partials/field.html" with field=form.insurance_pct col="col-sm-6" %}
+              {% include "partials/field.html" with field=form.ii_pct col="col-sm-6" %}
+              {% include "partials/field.html" with field=form.ipi_pct col="col-sm-6" %}
+              {% include "partials/field.html" with field=form.pis_pct col="col-sm-6" %}
+              {% include "partials/field.html" with field=form.cofins_pct col="col-sm-6" %}
+              {% include "partials/field.html" with field=form.domestic_freight_pct col="col-sm-6" %}
+            </div></div>
+          </div></div>
+        </div></div>
+      </details>
+
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-calculator me-1"></i>Calcular</button>
+        <button class="btn btn-outline-primary" type="submit" name="action" value="save"><i class="bi bi-save me-1"></i>Salvar simulação</button>
+        <span id="calc-indicator" class="htmx-indicator small text-secondary align-self-center"><span class="spinner-border spinner-border-sm"></span> calculando…</span>
+      </div>
+    </form>
+    </div>
+  </div>
+  <div class="col-xl-7"><div id="results">{% include "research/_opportunity_results.html" %}</div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Mostra só os campos da origem (nacional/importado) e do regime de importação escolhidos.
+  (function () {
+    const form = document.getElementById("opp-form");
+    function sync() {
+      const origin = form.querySelector("input[name=origin]:checked")?.value || "national";
+      const regime = form.querySelector("input[name=regime]:checked")?.value || "simplified";
+      form.querySelectorAll("[data-origin]").forEach((el) => { el.hidden = el.dataset.origin !== origin; });
+      form.querySelectorAll("[data-regime]").forEach((el) => { el.hidden = el.dataset.regime !== regime; });
+    }
+    form.addEventListener("change", sync);
+    sync();
+  })();
+</script>
+{% endblock %}

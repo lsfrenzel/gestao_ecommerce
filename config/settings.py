@@ -109,6 +109,14 @@ MERCADOPAGO_WEBHOOK_SECRET = _credential("MERCADOPAGO_WEBHOOK_SECRET", "MERCADO_
                                          "MP_WEBHOOK_SECRET")
 FREE_TRIAL_DAYS = env_int("FREE_TRIAL_DAYS", 14)
 
+# Pesquisa de mercado (Google Trends). Sem chave, consulta o Google Trends diretamente; com SERPAPI_API_KEY
+# usa a API Google Trends do SerpApi (mais estável em servidores de nuvem, que o Google costuma limitar).
+SERPAPI_API_KEY = _credential("SERPAPI_API_KEY", "SERPAPI_KEY")
+TRENDS_CACHE_HOURS = env_int("TRENDS_CACHE_HOURS", 12)
+TRENDS_SEARCHES_PER_HOUR = env_int("TRENDS_SEARCHES_PER_HOUR", 40)
+# Nos testes nenhuma consulta sai para a internet (Google Trends, SerpApi, cotação do dólar).
+EXTERNAL_LOOKUPS_ENABLED = not TESTING
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -133,6 +141,7 @@ INSTALLED_APPS = [
     "apps.sales",
     "apps.finance",
     "apps.marketing",
+    "apps.research",
     "apps.reports",
     "apps.dashboard",
 ]

@@ -218,3 +218,20 @@ a { color: var(--navy-3); }
 .platform .sidebar .nav-link.active { background: #374151; }
 .htmx-indicator { opacity: 0; transition: opacity .2s; }
 .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+
+/* Pesquisa de mercado */
+.trend-score { font-size: 2rem; font-weight: 700; color: var(--navy); line-height: 1; }
+.trend-card .progress-bar { background: var(--brand); }
+.related-list li { display: flex; justify-content: space-between; gap: .5rem; padding: .2rem 0; border-bottom: 1px dashed var(--border); }
+.related-list li:last-child { border-bottom: 0; }
+.assumptions > summary { cursor: pointer; list-style: none; }
+.assumptions > summary::-webkit-details-marker { display: none; }
+.assumptions > summary::before { content: "\25B8"; display: inline-block; margin-right: .4rem; transition: transform .15s; }
+.assumptions[open] > summary::before { transform: rotate(90deg); }
+.verdict { border-radius: 12px; padding: 1.1rem 1.25rem; color: #fff; }
+.verdict-success { background: linear-gradient(135deg, #0b7a43, var(--positive)); }
+.verdict-danger { background: linear-gradient(135deg, #a61b14, var(--negative)); }
+.verdict-warning { background: linear-gradient(135deg, #b45309, var(--warning)); }
+.verdict-secondary { background: linear-gradient(135deg, var(--navy), var(--navy-3)); }
+.verdict-title { font-size: 1.3rem; font-weight: 700; }
+.verdict-value { font-size: 2rem; font-weight: 700; line-height: 1; }

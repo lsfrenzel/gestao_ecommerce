@@ -28,6 +28,7 @@ Gunicorn · WhiteNoise · django-storages (S3-compatible) · ReportLab (PDF) · 
 | **Clientes** | Cadastro mínimo, histórico, total comprado, última compra, LGPD (exportação JSON e anonimização) |
 | **Financeiro** | Contas a pagar/receber, despesas fixas mensais (geração de lançamentos), categorias, vencimentos, pagamentos/recebimentos, fluxo de caixa e comparativo mensal, metas |
 | **Marketing** | Campanhas com conversão, CPC, CAC, ROAS e ticket médio; comparativo e gráficos |
+| **Pesquisa** | Google Trends (interesse ao longo do tempo, comparação de até 5 termos, pesquisas relacionadas, interesse por estado, buscas em alta agora) e simulação de oportunidade de produto nacional ou importado com margem líquida mínima de 30% |
 | **Relatórios** | 13 relatórios com filtros (período, produto, categoria, canal) e exportação CSV/PDF |
 | **Plataforma (SUPER ADMIN)** | Dashboard de usuários/empresas/acessos/planos, gestão de usuários (bloqueio, convite, link de redefinição), empresas (plano, suspensão), planos SaaS e auditoria |
 
@@ -227,6 +228,27 @@ o cliente autoriza no checkout do Mercado Pago e os dados do cartão nunca passa
    pagador não pode ser o da conta vendedora).
 5. Recomendado: Railway Cron diário com `python manage.py sync_subscriptions` (reconcilia situações e encerra descontos
    de cupom vencidos).
+
+## Pesquisa de mercado (Google Trends)
+
+Menu **Pesquisa** (módulo `research`, recurso de plano `marketing`).
+
+- **Tendências**: sem configuração, o sistema consulta o Google Trends diretamente. O Google pode limitar (HTTP 429)
+  servidores de nuvem como o Railway; nesse caso configure `SERPAPI_API_KEY` (serpapi.com) e as consultas passam a
+  usar a API Google Trends do SerpApi. Resultados ficam em cache por `TRENDS_CACHE_HOURS` (padrão 12 h) e cada
+  empresa faz até `TRENDS_SEARCHES_PER_HOUR` (padrão 40) consultas novas por hora.
+- **Índice de tendência (0–100)** = 50% interesse recente + 50% impulso (50 + variação/2). Direção: alta ≥ +10%,
+  queda ≤ −10% (último quarto do período contra o quarto anterior).
+- **Simulação de oportunidade**: informe o custo no fornecedor (R$ nacional ou US$ FOB importado) e o preço de venda.
+  Os demais custos são estimados automaticamente e podem ser ajustados:
+  - impostos (alíquota da empresa ou 6%), tarifas de referência do canal, marketing pelo histórico das campanhas
+    (investimento ÷ receita, 180 dias) e devoluções/embalagem padrão;
+  - importação pela cotação do dólar do dia (AwesomeAPI, com PTAX do Banco Central como alternativa).
+    **Remessa Conforme/RTS**: II de 20% até US$ 50, 60% − US$ 20 acima, ICMS "por dentro".
+    **Importação formal**: II, IPI, PIS/COFINS-Importação, ICMS e despesas aduaneiras.
+- Aprovação: **margem líquida = (preço − custo posto − custos de venda) ÷ preço ≥ 30%**. O resultado também mostra o
+  preço mínimo, o custo máximo de compra e o retorno do lote.
+- Se a simulação foi salva sem pesquisa prévia, a tendência do produto é buscada automaticamente.
 
 ## API (integrações futuras)
 

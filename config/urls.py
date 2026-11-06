@@ -27,6 +27,7 @@ urlpatterns = [
     path("vendas/", include("apps.sales.urls")),
     path("financeiro/", include("apps.finance.urls")),
     path("marketing/", include("apps.marketing.urls")),
+    path("pesquisa/", include("apps.research.urls")),
     path("relatorios/", include("apps.reports.urls")),
     path("api/", include("apps.core.api_urls")),
     path("django-admin/", admin.site.urls),

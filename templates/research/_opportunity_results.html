@@ -1,0 +1,83 @@
+{% load ui l10n %}
+{% if calc_error %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-octagon me-1"></i><strong>Não foi possível simular.</strong> {{ calc_error }}</div>
+{% elif form.is_bound and form.errors %}
+<div class="alert alert-warning">Corrija os campos destacados para simular.</div>
+{% for name, errs in form.errors.items %}<div class="small text-danger">{{ errs|join:" " }}</div>{% endfor %}
+{% elif result %}
+<div class="verdict verdict-{{ result.verdict_style }} mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div><div class="small opacity-75">Resultado da simulação</div>
+      <div class="verdict-title"><i class="bi {% if result.verdict == 'approved' %}bi-check-circle-fill{% elif result.verdict == 'rejected' %}bi-x-circle-fill{% elif result.verdict == 'attention' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} me-2"></i>{{ result.verdict_label }}</div>
+      <div class="small opacity-75">{% if result.net_margin_pct is not None %}Margem líquida de {{ result.net_margin_pct|pct:2 }} para um mínimo exigido de {{ result.target_margin_pct|pct:0 }}{% else %}Para {{ result.target_margin_pct|pct:0 }} de margem líquida, venda por pelo menos {{ result.minimum_price|brl }}{% endif %}</div></div>
+    {% if result.net_margin_pct is not None %}<div class="text-end"><div class="verdict-value">{{ result.net_margin_pct|pct:1 }}</div><div class="small opacity-75">margem líquida</div></div>{% endif %}
+  </div>
+</div>
+{% for w in result.warnings %}<div class="alert alert-warning py-2 small">{{ w }}</div>{% endfor %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Custo posto no estoque</div><div class="value fs-5">{{ result.landed_cost|brl }}</div><div class="hint">por unidade, com {% if data.origin == 'international' %}impostos de importação{% else %}frete de entrada{% endif %}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi {% if result.net_margin|neg %}negative{% elif result.net_margin is not None %}positive{% endif %}"><div class="label">Lucro por unidade</div><div class="value fs-5">{{ result.net_margin|brl }}</div><div class="hint">após todos os custos</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Preço mínimo ({{ result.target_margin_pct|pct:0 }})</div><div class="value fs-5">{{ result.minimum_price|brl }}</div><div class="hint">menor preço que atinge a margem</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Custo máximo de compra</div><div class="value fs-5">{% if result.max_unit_cost is None %}—{% elif data.origin == 'international' %}US$ {{ result.max_unit_cost|num:2 }}{% else %}{{ result.max_unit_cost|brl }}{% endif %}</div><div class="hint">{% if result.sale_price %}para manter {{ result.target_margin_pct|pct:0 }} vendendo a {{ result.sale_price|brl }}{% else %}informe o preço de venda{% endif %}</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-header">Composição por unidade</div><div class="table-responsive"><table class="table table-sm mb-0">
+      <tbody>
+        {% if result.sale_price %}<tr class="fw-semibold"><td>Preço de venda</td><td class="num">{{ result.sale_price|brl }}</td></tr>{% endif %}
+        <tr class="table-light"><td colspan="2" class="small fw-semibold">Custo posto no estoque{% if data.origin == 'international' %} · {% if result.regime_used == 'formal' %}importação formal{% else %}Remessa Conforme / RTS{% endif %}{% endif %}</td></tr>
+        {% for label, value in result.landed_lines %}<tr><td class="ps-3">{{ label }}</td><td class="num">− {{ value|brl }}</td></tr>{% endfor %}
+        {% if result.sale_price %}
+        <tr class="table-light"><td colspan="2" class="small fw-semibold">Custos de venda</td></tr>
+        {% for label, value in result.selling_lines %}<tr><td class="ps-3">{{ label }}</td><td class="num">− {{ value|brl }}</td></tr>{% endfor %}
+        <tr class="fw-semibold"><td>Lucro líquido por unidade</td><td class="num {% if result.net_margin|neg %}text-negative{% else %}text-positive{% endif %}">{{ result.net_margin|brl }}</td></tr>
+        <tr><td>Markup sobre o custo posto</td><td class="num">{% if result.markup %}{{ result.markup|num:2 }}×{% else %}—{% endif %}</td></tr>
+        {% endif %}
+      </tbody></table></div>
+      {% if data.origin == 'international' and result.customs_value_usd %}<div class="card-body pt-2 small text-secondary">Valor aduaneiro do lote: US$ {{ result.customs_value_usd|num:2 }} (FOB + frete + seguro).</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-header">Lote de {{ data.quantity|qty }} unidade{{ data.quantity|pluralize }}</div><div class="card-body">
+      <dl class="row mb-0 small">
+        <dt class="col-7 fw-normal text-secondary">Investimento em estoque</dt><dd class="col-5 text-end">{{ result.lot_investment|brl }}</dd>
+        {% if result.sale_price %}
+        <dt class="col-7 fw-normal text-secondary">Faturamento (todas vendidas)</dt><dd class="col-5 text-end">{{ result.lot_revenue|brl }}</dd>
+        <dt class="col-7 fw-normal text-secondary">Lucro líquido do lote</dt><dd class="col-5 text-end fw-semibold {% if result.lot_profit|neg %}text-negative{% else %}text-positive{% endif %}">{{ result.lot_profit|brl }}</dd>
+        <dt class="col-7 fw-normal text-secondary">Retorno sobre o investimento</dt><dd class="col-5 text-end">{{ result.roi_pct|pct }}</dd>
+        {% endif %}
+      </dl>
+      {% if result.sale_price and result.net_margin and not result.net_margin|neg %}<div class="chart-box sm mt-3"><canvas id="ch-opp"></canvas></div>{% endif %}
+    </div></div>
+  </div>
+</div>
+
+<div class="card mb-3"><div class="card-header">Premissas usadas no cálculo</div><div class="table-responsive"><table class="table table-sm mb-0">
+  <thead><tr><th>Premissa</th><th class="num">Valor</th><th>Origem</th></tr></thead>
+  <tbody>{% for a in assumptions %}<tr>
+    <td>{{ a.label }}</td>
+    <td class="num text-nowrap">{% if a.value is None %}—{% elif a.unit == "R$" %}{% if a.field == "exchange_rate" %}R$ {{ a.value|num:4 }}{% else %}{{ a.value|brl }}{% endif %}{% elif a.unit == "US$" %}US$ {{ a.value|num:2 }}{% else %}{{ a.value|num:2 }}%{% endif %}</td>
+    <td class="small">{% if a.auto %}<span class="badge badge-soft me-1">automático</span>{% else %}<span class="badge text-bg-secondary me-1">informado</span>{% endif %}<span class="text-secondary">{{ a.source }}</span></td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+<div class="card-body pt-2"><div class="formula">Margem líquida = (preço − custo posto no estoque − custos de venda) ÷ preço. Preço mínimo = (custo posto + custos fixos por venda) ÷ (1 − % custos de venda − {{ result.target_margin_pct|num:0 }}%). As tarifas de canais e as regras de importação são estimativas de referência: confira os valores vigentes antes de comprar.</div></div>
+</div>
+{% if result.sale_price and result.net_margin and not result.net_margin|neg %}
+<script>
+  (function draw() {
+    if (typeof makeChart === "undefined" || typeof Chart === "undefined") {
+      document.addEventListener("DOMContentLoaded", draw, {once: true});
+      return;
+    }
+    const prev = Chart.getChart("ch-opp"); if (prev) prev.destroy();
+    makeChart("ch-opp", {type: "doughnut", data: {labels: ["Custo posto no estoque", "Custos de venda", "Lucro líquido"],
+      datasets: [{data: ["{{ result.landed_cost|unlocalize }}", "{{ result.selling_costs|unlocalize }}", "{{ result.net_margin|unlocalize }}"], backgroundColor: ["#64748b", "#f59e0b", "#16a34a"]}]},
+      options: {plugins: {legend: {position: "bottom"}}}}, {money: true});
+  })();
+</script>
+{% endif %}
+{% else %}
+<div class="card"><div class="empty-state"><i class="bi bi-graph-up-arrow"></i>Informe o produto, a origem e o custo no fornecedor. Os demais custos são estimados automaticamente e o resultado aparece aqui.</div></div>
+{% endif %}

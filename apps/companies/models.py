@@ -27,6 +27,7 @@ MODULES = [
     ("customers", "Clientes"),
     ("finance", "Financeiro"),
     ("marketing", "Marketing"),
+    ("research", "Pesquisa de mercado"),
     ("reports", "Relatórios"),
     ("settings", "Configurações"),
 ]

@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Simulações de oportunidade{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><a class="small" href="{% url 'research:trends' %}"><i class="bi bi-arrow-left"></i> Pesquisa de mercado</a><h1>Simulações de oportunidade</h1>
+    <div class="subtitle">Produtos avaliados com margem líquida mínima exigida</div></div>
+  <a class="btn btn-primary" href="{% url 'research:opportunity' %}"><i class="bi bi-plus-lg me-1"></i>Nova simulação</a>
+</div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <input class="form-control" style="max-width:280px" type="search" name="q" value="{{ q }}" placeholder="Produto">
+  <select name="situacao" class="form-select" style="max-width:180px" onchange="this.form.submit()"><option value="">Todas</option>
+    <option value="viaveis" {% if status == 'viaveis' %}selected{% endif %}>Aprovadas</option>
+    <option value="reprovadas" {% if status == 'reprovadas' %}selected{% endif %}>Reprovadas</option></select>
+  <select name="origem" class="form-select" style="max-width:220px" onchange="this.form.submit()"><option value="">Nacional e importado</option>
+    {% for value, label in origins %}<option value="{{ value }}" {% if origin == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Produto</th><th>Origem</th><th class="num">Custo posto</th><th class="num">Preço de venda</th><th class="num">Margem líquida</th><th class="num">Preço mínimo</th><th>Tendência</th><th>Resultado</th><th></th></tr></thead>
+  <tbody>{% for s in page_obj %}<tr>
+    <td><a class="fw-semibold" href="{% url 'research:opportunity' %}?simulacao={{ s.pk }}">{{ s.name }}</a><div class="small text-secondary">{{ s.created_at|date:"d/m/Y H:i" }}{% if s.created_by %} · {{ s.created_by }}{% endif %}</div></td>
+    <td class="small">{% if s.origin == 'international' %}<i class="bi bi-globe2 me-1"></i>Importado{% else %}<i class="bi bi-geo-alt me-1"></i>Nacional{% endif %}</td>
+    <td class="num">{{ s.landed_cost|brl }}</td>
+    <td class="num">{{ s.sale_price|brl }}</td>
+    <td class="num fw-semibold {% if s.margin_pct is not None and s.margin_pct < s.target_margin_pct %}text-negative{% elif s.margin_pct is not None %}text-positive{% endif %}">{{ s.margin_pct|pct }}<div class="small text-secondary fw-normal">mín. {{ s.target_margin_pct|pct:0 }}</div></td>
+    <td class="num">{{ s.minimum_price|brl }}</td>
+    <td class="small">{% if s.trend_score is not None %}{{ s.trend_score }} · {{ directions|get_item:s.trend_direction|default:"—" }}{% else %}—{% endif %}</td>
+    <td>{% if s.margin_pct is None %}<span class="badge text-bg-secondary">Sem preço</span>{% elif s.is_viable and s.trend_direction == 'queda' %}<span class="badge text-bg-warning">Atenção</span>{% elif s.is_viable %}<span class="badge status-ok">Aprovada</span>{% else %}<span class="badge text-bg-danger">Reprovada</span>{% endif %}</td>
+    <td class="text-end">{% if current_membership.is_manager_or_admin %}<a class="btn btn-sm btn-light text-danger" href="{% url 'research:simulation_delete' s.pk %}" aria-label="Excluir"><i class="bi bi-trash"></i></a>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="9"><div class="empty-state"><i class="bi bi-graph-up-arrow"></i>Nenhuma simulação salva. Pesquise um produto e clique em Simular oportunidade.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

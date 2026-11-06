@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Pesquisa de mercado{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Pesquisa de mercado</h1><div class="subtitle">Tendências de busca do Google Trends para mapear a demanda antes de comprar estoque</div></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'research:simulations' %}"><i class="bi bi-folder2-open me-1"></i>Simulações salvas</a>
+    <a class="btn btn-primary" href="{% url 'research:opportunity' %}"><i class="bi bi-calculator me-1"></i>Simular oportunidade</a>
+  </div>
+</div>
+
+<div class="card mb-3"><div class="card-body">
+  <form method="get" class="row g-2 align-items-end" novalidate>
+    <div class="col-lg-6"><label class="form-label" for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>{{ form.q }}
+      <div class="form-text">{{ form.q.help_text }}</div>{% for e in form.q.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}</div>
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="{{ form.geo.id_for_label }}">{{ form.geo.label }}</label>{{ form.geo }}<div class="form-text">&nbsp;</div></div>
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="{{ form.periodo.id_for_label }}">{{ form.periodo.label }}</label>{{ form.periodo }}<div class="form-text">&nbsp;</div></div>
+    <div class="col-lg-2"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i>Pesquisar</button><div class="form-text">&nbsp;</div></div>
+  </form>
+</div></div>
+
+{% if error %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>{{ error }}</div>{% endif %}
+
+{% if result %}
+<div class="row g-3 mb-3">
+  {% for s in stats %}
+  <div class="col-md-6 col-xl-4"><div class="card h-100 trend-card"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+      <div><div class="small text-secondary">Termo pesquisado</div><div class="fw-semibold fs-5 text-break">{{ s.keyword }}</div></div>
+      <span class="badge {% if s.direction == 'alta' %}status-ok{% elif s.direction == 'queda' %}text-bg-danger{% else %}text-bg-secondary{% endif %}"><i class="bi {% if s.direction == 'alta' %}bi-arrow-up-right{% elif s.direction == 'queda' %}bi-arrow-down-right{% else %}bi-arrow-right{% endif %} me-1"></i>{{ s.direction_label }}</span>
+    </div>
+    <div class="d-flex align-items-end gap-3 mb-2">
+      <div><div class="trend-score">{{ s.score }}</div><div class="small text-secondary">índice de tendência</div></div>
+      <div class="flex-grow-1"><div class="progress" role="progressbar" aria-label="Índice de tendência" aria-valuenow="{{ s.score }}" aria-valuemin="0" aria-valuemax="100" style="height:8px"><div class="progress-bar" style="width:{{ s.score }}%"></div></div></div>
+    </div>
+    <dl class="row small mb-3">
+      <dt class="col-7 fw-normal text-secondary">Variação recente</dt><dd class="col-5 text-end mb-1 {% if s.growth_pct|neg %}text-negative{% elif s.growth_pct %}text-positive{% endif %}">{% if s.growth_pct is None %}—{% else %}{% if not s.growth_pct|neg %}+{% endif %}{{ s.growth_pct|pct }}{% endif %}</dd>
+      <dt class="col-7 fw-normal text-secondary">Interesse médio / recente</dt><dd class="col-5 text-end mb-1">{{ s.average|num:0 }} / {{ s.recent|num:0 }}</dd>
+      <dt class="col-7 fw-normal text-secondary">Pico</dt><dd class="col-5 text-end mb-1">{{ s.peak }}{% if s.peak_label %} <span class="text-secondary">({{ s.peak_label }})</span>{% endif %}</dd>
+      {% if s.seasonal_peak %}<dt class="col-7 fw-normal text-secondary">Mês mais forte</dt><dd class="col-5 text-end mb-1 text-capitalize">{{ s.seasonal_peak }}</dd>{% endif %}
+    </dl>
+    <a class="btn btn-sm btn-primary w-100" href="{% url 'research:opportunity' %}?produto={{ s.keyword|urlencode }}&indice={{ s.score }}&direcao={{ s.direction }}"><i class="bi bi-calculator me-1"></i>Simular oportunidade</a>
+  </div></div></div>
+  {% endfor %}
+</div>
+
+<div class="card mb-3"><div class="card-header d-flex justify-content-between flex-wrap gap-2"><span>Interesse ao longo do tempo</span><span class="small text-secondary fw-normal">{{ geo_label }} · {{ timeframe_label }}</span></div>
+  <div class="card-body"><div class="chart-box"><canvas id="ch-trend"></canvas></div>
+  <div class="form-text">Escala relativa de 0 a 100: 100 é o maior volume de buscas do período entre os termos comparados (não é o número absoluto de buscas).</div></div></div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-7">
+    <div class="card h-100"><div class="card-header">Pesquisas relacionadas</div><div class="card-body">
+      {% for kw, lists in result.related.items %}
+      <div class="mb-3"><div class="fw-semibold mb-2">{{ kw }}</div><div class="row g-3">
+        <div class="col-md-6"><div class="small text-secondary mb-1"><i class="bi bi-rocket-takeoff me-1"></i>Em ascensão</div>
+          <ul class="list-unstyled small mb-0 related-list">{% for r in lists.rising %}<li><a href="?q={{ r.query|urlencode }}&geo={{ result.geo }}&periodo={{ result.timeframe|urlencode }}">{{ r.query }}</a><span class="text-positive">{{ r.value }}</span></li>{% empty %}<li class="text-secondary">Sem dados suficientes.</li>{% endfor %}</ul></div>
+        <div class="col-md-6"><div class="small text-secondary mb-1"><i class="bi bi-star me-1"></i>Mais buscadas</div>
+          <ul class="list-unstyled small mb-0 related-list">{% for r in lists.top %}<li><a href="?q={{ r.query|urlencode }}&geo={{ result.geo }}&periodo={{ result.timeframe|urlencode }}">{{ r.query }}</a><span class="text-secondary">{{ r.value }}</span></li>{% empty %}<li class="text-secondary">Sem dados suficientes.</li>{% endfor %}</ul></div>
+      </div></div>
+      {% empty %}<div class="text-secondary small">O Google Trends não retornou pesquisas relacionadas para esses termos.</div>{% endfor %}
+    </div></div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100"><div class="card-header">Interesse por região</div>
+      {% if regions %}<div class="table-responsive"><table class="table table-sm mb-0">
+        <thead><tr><th>Região</th>{% for k in result.keywords %}<th class="num">{{ k|truncatechars:18 }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for r in regions %}<tr><td>{{ r.name }}</td>{% for v in r.values %}<td class="num">{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+      </table></div>
+      {% else %}<div class="card-body text-secondary small">Sem detalhamento regional para esta consulta.</div>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="small text-secondary mb-3"><i class="bi bi-info-circle me-1"></i>Fonte: Google Trends{% if result.provider == "serpapi" %} via SerpApi{% endif %} · dados de {{ fetched_at|date:"d/m/Y H:i" }}{% if from_cache %} (cache){% endif %}. O índice de tendência combina o interesse recente com a variação em relação ao período anterior.</div>
+
+{% else %}
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="card h-100"><div class="card-header"><i class="bi bi-fire me-1 text-danger"></i>Em alta agora no Brasil</div>
+      {% if trending %}<div class="list-group list-group-flush">{% for t in trending %}
+        <a class="list-group-item list-group-item-action d-flex justify-content-between gap-2" href="?q={{ t.query|urlencode }}&geo=BR&periodo=today%201-m">
+          <span><span class="fw-semibold">{{ t.query }}</span>{% if t.news %}<div class="small text-secondary text-truncate" style="max-width:520px">{{ t.news }}</div>{% endif %}</span>
+          {% if t.traffic %}<span class="small text-secondary text-nowrap">{{ t.traffic }} buscas</span>{% endif %}</a>
+      {% endfor %}</div>
+      {% else %}<div class="card-body text-secondary small">Não foi possível carregar as buscas em alta agora. Você ainda pode pesquisar qualquer produto acima.</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card mb-3"><div class="card-header">Como usar</div><div class="card-body small">
+      <ol class="mb-0 ps-3">
+        <li class="mb-1">Pesquise um ou mais produtos (até 5) para comparar a demanda.</li>
+        <li class="mb-1">Veja se a busca está <strong>em alta</strong>, o mês mais forte e as pesquisas relacionadas em ascensão.</li>
+        <li class="mb-1">Clique em <strong>Simular oportunidade</strong> no produto escolhido.</li>
+        <li>Informe o custo no fornecedor (nacional em R$ ou importado em US$) e o preço de venda: os demais custos são estimados automaticamente e o produto é aprovado só com <strong>margem líquida mínima de 30%</strong>.</li>
+      </ol></div></div>
+    <div class="card"><div class="card-header">Pesquisas recentes</div>
+      {% if history %}<div class="list-group list-group-flush">{% for h in history %}
+        <a class="list-group-item list-group-item-action small d-flex justify-content-between gap-2" href="?q={{ h.keywords|urlencode }}&geo={{ h.geo }}&periodo={{ h.timeframe|urlencode }}"><span class="text-truncate">{{ h.keywords }}</span><span class="text-secondary text-nowrap">{{ h.created_at|date:"d/m H:i" }}</span></a>
+      {% endfor %}</div>{% else %}<div class="card-body small text-secondary">Nenhuma pesquisa feita ainda.</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if chart %}
+{{ chart|json_script:"trend-data" }}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const d = JSON.parse(document.getElementById("trend-data").textContent);
+    makeChart("ch-trend", { type: "line", data: { labels: d.labels, datasets: d.datasets.map(s => ({ label: s.label, data: s.data, color: s.color, fill: d.datasets.length === 1, pointRadius: 0 })) },
+      options: { scales: { y: { min: 0, max: 100, beginAtZero: true } } } });
+  });
+</script>
+{% endif %}
+{% endblock %}

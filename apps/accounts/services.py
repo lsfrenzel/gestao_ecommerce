@@ -11,6 +11,31 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 
+def generate_provisional_password() -> str:
+    """
+    Senha provisória forte e legível (ex.: Kx7m-Qp3w-Tz9b): 12 caracteres aleatórios em 3 grupos,
+    com maiúsculas, minúsculas e números, sem caracteres ambíguos (0/O, 1/l/I).
+    """
+    import secrets
+    import string
+
+    alphabet = "".join(c for c in string.ascii_letters + string.digits if c not in "0OolI1")
+    while True:
+        raw = "".join(secrets.choice(alphabet) for _ in range(12))
+        if any(c.isupper() for c in raw) and any(c.islower() for c in raw) and any(c.isdigit() for c in raw):
+            return f"{raw[:4]}-{raw[4:8]}-{raw[8:]}"
+
+
+def set_provisional_password(user) -> str:
+    """Define uma senha provisória (hash) e exige a troca no próximo acesso. Retorna a senha em texto
+    apenas para ser exibida UMA vez ao administrador — ela nunca é armazenada nem registrada em log."""
+    password = generate_provisional_password()
+    user.set_password(password)
+    user.must_change_password = True
+    user.save(update_fields=["password", "must_change_password"])
+    return password
+
+
 def password_link(user) -> str:
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)

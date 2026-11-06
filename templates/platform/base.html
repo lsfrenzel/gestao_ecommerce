@@ -11,6 +11,7 @@
       <a class="nav-link {% if '/usuarios/' in path %}active{% endif %}" href="{% url 'platform:users' %}"><i class="bi bi-people"></i>Usuários</a>
       <a class="nav-link {% if '/empresas/' in path %}active{% endif %}" href="{% url 'platform:companies' %}"><i class="bi bi-buildings"></i>Empresas</a>
       <a class="nav-link {% if '/planos/' in path %}active{% endif %}" href="{% url 'platform:plans' %}"><i class="bi bi-layers"></i>Planos</a>
+      <a class="nav-link {% if '/cupons/' in path %}active{% endif %}" href="{% url 'platform:coupons' %}"><i class="bi bi-ticket-perforated"></i>Cupons</a>
       <a class="nav-link {% if '/auditoria/' in path %}active{% endif %}" href="{% url 'platform:audit' %}"><i class="bi bi-journal-check"></i>Auditoria</a>
       {% if current_company %}<div class="nav-section">Minha empresa</div><a class="nav-link" href="{% url 'dashboard:home' %}"><i class="bi bi-box-arrow-left"></i>Voltar ao sistema</a>{% endif %}
     </nav>

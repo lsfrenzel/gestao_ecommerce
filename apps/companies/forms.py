@@ -67,6 +67,33 @@ class CompanyForm(StyledFormMixin, forms.ModelForm):
         return f"{value[:5]}-{value[5:]}" if value else ""
 
 
+class OnboardingForm(CompanyForm):
+    coupon_code = forms.CharField(label="Cupom de desconto (opcional)", max_length=30, required=False)
+
+    def clean_coupon_code(self):
+        from .models import Coupon
+
+        code = (self.cleaned_data.get("coupon_code") or "").strip().upper()
+        if not code:
+            return ""
+        coupon = Coupon.objects.filter(code=code).first()
+        if coupon is None:
+            raise forms.ValidationError("Cupom não encontrado.")
+        reason = coupon.unavailable_reason()
+        if reason:
+            raise forms.ValidationError(reason)
+        return code
+
+
+class RedeemCouponForm(StyledFormMixin, forms.Form):
+    code = forms.CharField(label="Código do cupom", max_length=30)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._style_fields()
+        self.fields["code"].widget.attrs.update({"style": "text-transform:uppercase", "placeholder": "Ex.: BEMVINDO50"})
+
+
 class CompanySettingsForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Company

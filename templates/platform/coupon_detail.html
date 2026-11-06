@@ -1,0 +1,31 @@
+{% extends "platform/base.html" %}
+{% load ui %}
+{% block title %}Cupom {{ coupon.code }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><a class="small" href="{% url 'platform:coupons' %}"><i class="bi bi-arrow-left"></i> Cupons</a>
+    <h1 class="font-monospace">{{ coupon.code }} <span class="badge {% if coupon.discount_percent == 100 %}text-bg-success{% else %}badge-soft{% endif %} fs-6 align-middle">{{ coupon.discount_percent }}% de desconto</span></h1>
+    <div class="subtitle">{{ coupon.description|default:"Sem descrição" }}</div></div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'platform:coupon_edit' coupon.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>
+    <form method="post" action="{% url 'platform:coupon_toggle' coupon.pk %}" data-confirm="{% if coupon.is_active %}Desativar o cupom? Novos resgates serão bloqueados; descontos já aplicados continuam.{% else %}Reativar o cupom?{% endif %}">{% csrf_token %}
+      <button class="btn {% if coupon.is_active %}btn-outline-danger{% else %}btn-success{% endif %}">{% if coupon.is_active %}Desativar{% else %}Reativar{% endif %}</button></form>
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Situação</div><div class="value fs-5">{% if coupon.unavailable_reason %}<span class="text-negative">Indisponível</span>{% else %}<span class="text-positive">Disponível</span>{% endif %}</div><div class="hint">{{ coupon.unavailable_reason|default:"pode ser resgatado" }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Duração do desconto</div><div class="value fs-5">{{ coupon.duration_label }}</div><div class="hint">a partir do resgate</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Usos</div><div class="value fs-5">{{ coupon.times_redeemed }}{% if coupon.max_redemptions %} / {{ coupon.max_redemptions }}{% endif %}</div><div class="hint">{% if coupon.max_redemptions %}limite de usos{% else %}sem limite de usos{% endif %}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kpi"><div class="label">Resgatável até</div><div class="value fs-5">{{ coupon.valid_until|date:"d/m/Y"|default:"sem prazo" }}</div><div class="hint">planos: {% for p in coupon.plans.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}todos{% endfor %}</div></div></div>
+</div>
+<div class="card"><div class="card-header">Empresas que usaram o cupom</div><div class="table-responsive"><table class="table table-sm table-hover">
+  <thead><tr><th>Empresa</th><th>Plano</th><th>Resgatado em</th><th>Por</th><th>Desconto até</th><th>Situação</th></tr></thead>
+  <tbody>{% for r in redemptions %}<tr>
+    <td><a href="{% url 'platform:company_detail' r.company.pk %}">{{ r.company }}</a></td><td class="small">{{ r.company.plan|default:"—" }}</td>
+    <td class="small">{{ r.created_at|date:"d/m/Y H:i" }}</td>
+    <td class="small">{% if r.applied_by_platform %}plataforma{% else %}a própria empresa{% endif %}{% if r.redeemed_by %} ({{ r.redeemed_by }}){% endif %}</td>
+    <td class="small">{{ r.expires_at|date:"d/m/Y"|default:"permanente" }}</td>
+    <td>{% if r.is_current %}<span class="badge status-ok">Em vigor</span>{% else %}<span class="badge text-bg-secondary">Encerrado</span>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="6" class="text-center text-secondary py-3">Nenhum resgate ainda. Compartilhe o código ou aplique-o pela ficha da empresa.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

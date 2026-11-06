@@ -3,7 +3,10 @@
 {% block title %}Usuários{% endblock %}
 {% block content %}
 <div class="page-header"><div><h1>Usuários</h1><div class="subtitle">{{ page_obj.paginator.count }} usuário(s)</div></div>
-  <a class="btn btn-primary" href="{% url 'platform:user_invite' %}"><i class="bi bi-person-plus me-1"></i>Convidar usuário</a></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'platform:user_invite' %}"><i class="bi bi-envelope me-1"></i>Convidar por e-mail</a>
+    <a class="btn btn-primary" href="{% url 'platform:user_create' %}"><i class="bi bi-person-plus me-1"></i>Cadastrar usuário</a>
+  </div></div>
 <form method="get" class="filters d-flex flex-wrap gap-2">
   <input class="form-control" style="max-width:320px" type="search" name="q" value="{{ q }}" placeholder="Nome ou e-mail">
   <select name="status" class="form-select" style="max-width:200px" onchange="this.form.submit()"><option value="">Todos</option>
@@ -16,7 +19,7 @@
   <tbody>{% for u in page_obj %}<tr>
     <td><a class="fw-semibold" href="{% url 'platform:user_detail' u.pk %}">{{ u.full_name }}</a>{% if u.is_superuser %} <span class="badge text-bg-danger">SUPER ADMIN</span>{% endif %}<div class="small text-secondary">{{ u.email }}</div></td>
     <td class="num">{{ u.companies_n }}</td><td class="small">{{ u.date_joined|date:"d/m/Y" }}</td><td class="small">{{ u.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</td>
-    <td>{% if u.is_active %}<span class="badge status-ok">Ativo</span>{% else %}<span class="badge status-out">Bloqueado</span>{% endif %}</td>
+    <td>{% if u.is_active %}<span class="badge status-ok">Ativo</span>{% else %}<span class="badge status-out">Bloqueado</span>{% endif %}{% if u.must_change_password %} <span class="badge status-low" title="Ainda não trocou a senha provisória">senha provisória</span>{% endif %}</td>
   </tr>{% empty %}<tr><td colspan="5"><div class="empty-state"><i class="bi bi-people"></i>Nenhum usuário.</div></td></tr>{% endfor %}</tbody>
 </table></div></div>
 {% include "partials/pagination.html" %}

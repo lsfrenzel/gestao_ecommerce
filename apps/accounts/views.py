@@ -111,13 +111,18 @@ def profile_view(request):
 @sensitive_post_parameters()
 def password_change_view(request):
     form = StyledPasswordChangeForm(request.user, request.POST or None)
+    forced = request.user.must_change_password
     if request.method == "POST" and form.is_valid():
-        user = form.save()
+        user = form.save(commit=False)
+        user.must_change_password = False
+        user.save()
         update_session_auth_hash(request, user)
-        log_action("user.password_change", request=request, target=user)
+        log_action("user.password_change", request=request, target=user, details={"provisoria": forced})
         messages.success(request, "Senha alterada com sucesso.")
-        return redirect("accounts:profile")
-    return render(request, "accounts/password_change.html", {"form": form})
+        return redirect("dashboard:home" if forced else "accounts:profile")
+    if forced:
+        form.fields["old_password"].label = "Senha provisória"
+    return render(request, "accounts/password_change.html", {"form": form, "forced": forced})
 
 
 class RateLimitedPasswordResetView(auth_views.PasswordResetView):
@@ -162,6 +167,7 @@ class PasswordResetConfirm(auth_views.PasswordResetConfirmView):
     success_url = reverse_lazy("accounts:password_reset_complete")
 
     def form_valid(self, form):
+        form.user.must_change_password = False  # a pessoa definiu a própria senha
         response = super().form_valid(form)
         log_action("user.password_reset", request=self.request, actor=form.user, target=form.user)
         return response

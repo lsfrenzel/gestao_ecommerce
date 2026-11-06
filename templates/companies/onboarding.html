@@ -25,6 +25,7 @@
       {% include "partials/field.html" with field=form.state col="col-md-4" %}
     </div>
   </details>
+  <div class="row">{% include "partials/field.html" with field=form.coupon_code %}</div>
   <button class="btn btn-brand w-100">Cadastrar empresa e começar</button>
 </form>
 <form method="post" action="{% url 'accounts:logout' %}" class="text-center mt-3">{% csrf_token %}<button class="btn btn-link btn-sm">Sair</button></form>

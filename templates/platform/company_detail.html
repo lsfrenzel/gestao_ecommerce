@@ -17,7 +17,27 @@
         {% for field in form %}{% include "partials/field.html" %}{% endfor %}
         <button class="btn btn-primary">Salvar</button>
       </form>
-      <div class="small text-secondary mt-2">Cobrança recorrente não está integrada: alterar o plano não gera cobrança.</div>
+      <div class="small text-secondary mt-2">Cobrança recorrente não está integrada: alterar o plano ou aplicar cupom não gera cobrança.</div>
+    </div></div>
+    <div class="card mb-3"><div class="card-header">Assinatura e cupom</div><div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline">
+        <span class="small text-secondary">Valor mensal{% if company.plan %} ({{ company.plan.name }}){% endif %}</span>
+        <span>{% if redemption %}<span class="text-secondary text-decoration-line-through small me-1">{{ company.plan.monthly_price|brl }}</span>{% endif %}
+          <strong class="fs-5 {% if redemption %}text-positive{% endif %}">{{ company.effective_monthly_price|brl }}</strong></span>
+      </div>
+      {% if redemption %}
+      <div class="alert alert-success py-2 small mt-2 mb-2"><i class="bi bi-ticket-perforated me-1"></i>
+        <a href="{% url 'platform:coupon_detail' redemption.coupon.pk %}" class="fw-semibold">{{ redemption.coupon.code }}</a> · {{ redemption.coupon.discount_percent }}% ·
+        {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}</div>
+      <form method="post" action="{% url 'platform:company_coupon' company.pk %}" data-confirm="Remover o cupom desta empresa? A assinatura volta ao preço cheio.">{% csrf_token %}
+        <input type="hidden" name="action" value="remover"><button class="btn btn-sm btn-outline-danger mb-3">Remover cupom</button></form>
+      {% endif %}
+      <form method="post" action="{% url 'platform:company_coupon' company.pk %}" class="mt-2">{% csrf_token %}
+        {% for field in coupon_form %}{% if field.name != "replace" or redemption %}{% include "partials/field.html" %}{% endif %}{% endfor %}
+        <button class="btn btn-primary btn-sm"><i class="bi bi-ticket-perforated me-1"></i>Aplicar cupom</button>
+        <a class="small ms-2" href="{% url 'platform:coupon_new' %}">criar cupom</a>
+      </form>
+      {% if coupon_history %}<hr><div class="small text-secondary">Histórico: {% for r in coupon_history %}{{ r.coupon.code }} ({{ r.created_at|date:"d/m/Y" }}{% if not r.is_current %}, encerrado{% endif %}){% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
     </div></div>
     <div class="card"><div class="card-header">Dados cadastrais</div><div class="card-body small">
       <div>Segmento: {{ company.get_segment_display }}</div><div>Telefone: {{ company.phone|default:"—" }}</div><div>E-mail: {{ company.email|default:"—" }}</div>

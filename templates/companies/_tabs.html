@@ -2,6 +2,7 @@
   <li class="nav-item"><a class="nav-link {% if tab == 'dados' %}active{% endif %}" href="{% url 'companies:settings' %}?aba=dados">Dados da empresa</a></li>
   <li class="nav-item"><a class="nav-link {% if tab == 'config' %}active{% endif %}" href="{% url 'companies:settings' %}?aba=config">Configurações</a></li>
   <li class="nav-item"><a class="nav-link {% if tab == 'depositos' %}active{% endif %}" href="{% url 'companies:settings' %}?aba=depositos">Depósitos</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'assinatura' %}active{% endif %}" href="{% url 'companies:subscription' %}">Assinatura</a></li>
   <li class="nav-item"><a class="nav-link {% if tab == 'equipe' %}active{% endif %}" href="{% url 'companies:team' %}">Usuários e permissões</a></li>
   <li class="nav-item"><a class="nav-link {% if tab == 'api' %}active{% endif %}" href="{% url 'companies:api_tokens' %}">Integrações (API)</a></li>
 </ul>

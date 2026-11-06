@@ -1,0 +1,27 @@
+{% extends "platform/base.html" %}
+{% block title %}Cupons{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Cupons de desconto</h1>
+  <div class="subtitle">Desconto de 50% ou 100% na assinatura · {{ stats.active }} cupom(ns) ativo(s) · {{ stats.companies }} empresa(s) com desconto em vigor</div></div>
+  <a class="btn btn-primary" href="{% url 'platform:coupon_new' %}"><i class="bi bi-plus-lg me-1"></i>Criar cupom</a></div>
+<form method="get" class="filters d-flex flex-wrap gap-2">
+  <input class="form-control" style="max-width:280px" type="search" name="q" value="{{ q }}" placeholder="Código ou descrição">
+  <select name="status" class="form-select" style="max-width:180px" onchange="this.form.submit()"><option value="">Todos</option>
+    <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
+    <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Desativados</option></select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover">
+  <thead><tr><th>Código</th><th>Desconto</th><th>Duração</th><th>Resgatável até</th><th class="num">Usos</th><th>Planos</th><th>Situação</th></tr></thead>
+  <tbody>{% for c in page_obj %}<tr>
+    <td><a class="fw-semibold font-monospace" href="{% url 'platform:coupon_detail' c.pk %}">{{ c.code }}</a>{% if c.description %}<div class="small text-secondary">{{ c.description }}</div>{% endif %}</td>
+    <td><span class="badge {% if c.discount_percent == 100 %}text-bg-success{% else %}badge-soft{% endif %}">{{ c.discount_percent }}%</span></td>
+    <td class="small">{{ c.duration_label }}</td>
+    <td class="small">{{ c.valid_until|date:"d/m/Y"|default:"sem prazo" }}</td>
+    <td class="num">{{ c.uses }}{% if c.max_redemptions %} / {{ c.max_redemptions }}{% endif %}<div class="small text-secondary">{{ c.active_uses }} em vigor</div></td>
+    <td class="small">{% for p in c.plans.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}todos{% endfor %}</td>
+    <td>{% if c.is_active %}<span class="badge status-ok">Ativo</span>{% else %}<span class="badge text-bg-secondary">Desativado</span>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="7"><div class="empty-state"><i class="bi bi-ticket-perforated"></i>Nenhum cupom criado.</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

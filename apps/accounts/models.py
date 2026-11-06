@@ -51,6 +51,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField("acesso ao admin técnico", default=False)
     date_joined = models.DateTimeField("cadastrado em", default=timezone.now)
     blocked_reason = models.CharField("motivo do bloqueio", max_length=200, blank=True)
+    must_change_password = models.BooleanField(
+        "deve trocar a senha no próximo acesso", default=False,
+        help_text="Marcado quando a conta recebe uma senha provisória gerada por um administrador.")
 
     objects = UserManager()
 

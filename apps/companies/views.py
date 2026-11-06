@@ -12,10 +12,11 @@ from apps.accounts.services import send_access_email
 from apps.core.audit import log_action
 from apps.core.permissions import company_view
 
-from .forms import CompanyForm, CompanySettingsForm, InviteMemberForm, MembershipForm, WarehouseForm
+from .forms import (CompanyForm, CompanySettingsForm, InviteMemberForm, MembershipForm, OnboardingForm,
+                    RedeemCouponForm, WarehouseForm)
 from .middleware import SESSION_KEY
 from .models import ApiToken, Membership, Warehouse
-from .services import PlanLimitError, check_user_limit, create_company
+from .services import CouponError, PlanLimitError, check_user_limit, create_company, redeem_coupon
 
 User = get_user_model()
 
@@ -25,13 +26,43 @@ def onboarding(request):
     """Cadastro da empresa: obrigatório antes de acessar a gestão."""
     if request.membership is not None and request.GET.get("nova") != "1":
         return redirect("dashboard:home")
-    form = CompanyForm(request.POST or None)
+    form = OnboardingForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        company = create_company(request.user, form.cleaned_data, request=request)
+        data = dict(form.cleaned_data)
+        coupon_code = data.pop("coupon_code", "")
+        company = create_company(request.user, data, request=request)
         request.session[SESSION_KEY] = company.pk
         messages.success(request, f"Empresa “{company}” cadastrada. Bem-vindo(a)!")
+        if coupon_code:
+            try:
+                redemption = redeem_coupon(company, coupon_code, user=request.user, request=request)
+            except CouponError as exc:
+                messages.warning(request, f"A empresa foi criada, mas o cupom não pôde ser aplicado: {exc}")
+            else:
+                messages.success(request, f"Cupom {redemption.coupon.code} aplicado: "
+                                          f"{redemption.coupon.discount_percent}% de desconto na assinatura.")
         return redirect("dashboard:home")
     return render(request, "companies/onboarding.html", {"form": form})
+
+
+@company_view("settings", admin=True)
+def subscription(request):
+    """Plano, preço da assinatura e resgate de cupom pela própria empresa."""
+    company = request.company
+    form = RedeemCouponForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            redemption = redeem_coupon(company, form.cleaned_data["code"], user=request.user, request=request)
+        except CouponError as exc:
+            form.add_error("code", str(exc))
+        else:
+            messages.success(request, f"Cupom {redemption.coupon.code} aplicado: "
+                                      f"{redemption.coupon.discount_percent}% de desconto na assinatura.")
+            return redirect("companies:subscription")
+    return render(request, "companies/subscription.html", {
+        "company": company, "form": form, "redemption": company.active_redemption,
+        "history": company.coupon_redemptions.select_related("coupon")[:10], "tab": "assinatura",
+    })
 
 
 @login_required

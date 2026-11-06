@@ -22,15 +22,17 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import LoginEvent
-from apps.accounts.services import send_access_email
-from apps.companies.models import Company, Membership, Plan
+from apps.accounts.services import send_access_email, set_provisional_password
+from apps.companies.models import Company, Coupon, CouponRedemption, Membership, Plan
+from apps.companies.services import CouponError, PlanLimitError, check_user_limit, redeem_coupon, remove_coupon
 from apps.core.audit import log_action
 from apps.core.models import AuditLog
+from apps.core.money import format_brl
 from apps.core.permissions import superadmin_required
 from apps.products.models import Product
 from apps.sales.models import SalesOrder
 
-from .forms import BlockForm, CompanyPlanForm, InviteUserForm, PlanForm
+from .forms import ApplyCouponForm, BlockForm, CompanyPlanForm, CouponForm, CreateUserForm, InviteUserForm, PlanForm
 
 User = get_user_model()
 
@@ -205,6 +207,8 @@ def company_detail(request, pk):
         "products_n": Product.objects.filter(company=company).count(),
         "sales_total": agg_total, "sales_30": agg_30, "form": form,
         "logs": AuditLog.objects.filter(company=company, platform_scope=True)[:15],
+        "redemption": company.active_redemption, "coupon_form": ApplyCouponForm(),
+        "coupon_history": company.coupon_redemptions.select_related("coupon")[:10],
     })
 
 
@@ -265,3 +269,147 @@ def audit(request):
                        | Q(company__trade_name__icontains=term))
     page = Paginator(qs, 50).get_page(request.GET.get("page"))
     return render(request, "platform/audit.html", {"page_obj": page, "q": term, "scope": scope})
+
+
+# ---------------------------------------------------------------------------
+# Cadastro direto de usuário com senha provisória
+# ---------------------------------------------------------------------------
+def _password_page(request, user, password, created: bool):
+    """Exibe a senha provisória UMA única vez (resposta direta, sem redirect nem armazenamento)."""
+    response = render(request, "platform/provisional_password.html",
+                      {"obj": user, "password": password, "created": created,
+                       "login_url": request.build_absolute_uri("/conta/entrar/")})
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@superadmin_required
+def user_create(request):
+    form = CreateUserForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        cd = form.cleaned_data
+        company = cd.get("company")
+        if company:
+            try:
+                check_user_limit(company)
+            except PlanLimitError as exc:
+                form.add_error("company", str(exc))
+        if form.is_valid():
+            with transaction.atomic():
+                user = User.objects.create_user(email=cd["email"], full_name=cd["full_name"],
+                                                phone=cd.get("phone", ""))
+                password = set_provisional_password(user)
+                if company:
+                    Membership.objects.create(user=user, company=company,
+                                              role=cd.get("role") or Membership.Role.OPERATOR)
+                log_action("platform.user_create", request=request, target=user, platform=True,
+                           details={"empresa": str(company or ""), "perfil": cd.get("role") or "",
+                                    "senha_provisoria": True})
+            return _password_page(request, user, password, created=True)
+    return render(request, "platform/form.html", {
+        "form": form, "title": "Cadastrar usuário", "back": "platform:users",
+        "intro": "O usuário é criado já ativo, com uma senha provisória gerada pelo sistema e exibida uma única "
+                 "vez. No primeiro acesso ele será obrigado a definir uma senha pessoal."})
+
+
+@superadmin_required
+@require_POST
+def user_provisional_password(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.pk == request.user.pk:
+        messages.error(request, "Para a sua própria conta, use “Alterar senha”.")
+        return redirect("platform:user_detail", pk=pk)
+    if not user.is_active:
+        messages.error(request, "Desbloqueie a conta antes de gerar uma senha provisória.")
+        return redirect("platform:user_detail", pk=pk)
+    password = set_provisional_password(user)
+    log_action("platform.user_provisional_password", request=request, target=user, platform=True)
+    return _password_page(request, user, password, created=False)
+
+
+# ---------------------------------------------------------------------------
+# Cupons de desconto na assinatura
+# ---------------------------------------------------------------------------
+@superadmin_required
+def coupons(request):
+    qs = Coupon.objects.annotate(uses=Count("redemptions", distinct=True),
+                                 active_uses=Count("redemptions", filter=Q(redemptions__is_active=True),
+                                                   distinct=True)).prefetch_related("plans").order_by("-created_at")
+    status = request.GET.get("status", "")
+    if status == "ativos":
+        qs = qs.filter(is_active=True)
+    elif status == "inativos":
+        qs = qs.filter(is_active=False)
+    term = request.GET.get("q", "").strip()
+    if term:
+        qs = qs.filter(Q(code__icontains=term) | Q(description__icontains=term))
+    page = Paginator(qs, 30).get_page(request.GET.get("page"))
+    stats = {"active": Coupon.objects.filter(is_active=True).count(),
+             "companies": CouponRedemption.objects.filter(is_active=True).values("company").distinct().count()}
+    return render(request, "platform/coupons.html", {"page_obj": page, "status": status, "q": term, "stats": stats})
+
+
+@superadmin_required
+def coupon_form(request, pk=None):
+    coupon = get_object_or_404(Coupon, pk=pk) if pk else None
+    form = CouponForm(request.POST or None, instance=coupon)
+    if request.method == "POST" and form.is_valid():
+        obj = form.save(commit=False)
+        if obj.pk is None:
+            obj.created_by = request.user
+        obj.save()
+        form.save_m2m()
+        log_action("platform.coupon_save", request=request, target=obj, platform=True,
+                   details={"codigo": obj.code, "desconto": obj.discount_percent, "campos": form.changed_data})
+        messages.success(request, f"Cupom {obj.code} salvo ({obj.discount_percent}% de desconto).")
+        return redirect("platform:coupon_detail", pk=obj.pk)
+    return render(request, "platform/form.html", {
+        "form": form, "title": f"Editar cupom {coupon.code}" if coupon else "Novo cupom", "back": "platform:coupons",
+        "intro": "O desconto incide sobre o preço mensal do plano da empresa. Não há cobrança automática: o valor "
+                 "com desconto fica registrado para a futura integração com o gateway de pagamentos."})
+
+
+@superadmin_required
+def coupon_detail(request, pk):
+    coupon = get_object_or_404(Coupon.objects.prefetch_related("plans"), pk=pk)
+    redemptions = coupon.redemptions.select_related("company", "company__plan", "redeemed_by")
+    return render(request, "platform/coupon_detail.html", {"coupon": coupon, "redemptions": redemptions})
+
+
+@superadmin_required
+@require_POST
+def coupon_toggle(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+    coupon.is_active = not coupon.is_active
+    coupon.save(update_fields=["is_active", "updated_at"])
+    log_action("platform.coupon_toggle", request=request, target=coupon, platform=True,
+               details={"ativo": coupon.is_active})
+    messages.success(request, f"Cupom {coupon.code} {'ativado' if coupon.is_active else 'desativado'}. "
+                              "Descontos já aplicados às empresas não são alterados.")
+    return redirect("platform:coupon_detail", pk=pk)
+
+
+@superadmin_required
+@require_POST
+def company_coupon(request, pk):
+    company = get_object_or_404(Company, pk=pk)
+    if request.POST.get("action") == "remover":
+        if remove_coupon(company, user=request.user, request=request):
+            messages.success(request, "Cupom removido. A assinatura volta ao preço cheio do plano.")
+        else:
+            messages.info(request, "A empresa não tem cupom em vigor.")
+        return redirect("platform:company_detail", pk=pk)
+    form = ApplyCouponForm(request.POST)
+    if form.is_valid():
+        try:
+            redemption = redeem_coupon(company, form.cleaned_data["code"], user=request.user, request=request,
+                                       by_platform=True, replace=form.cleaned_data["replace"])
+        except CouponError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f"Cupom {redemption.coupon.code} aplicado: {redemption.coupon.discount_percent}% "
+                                      f"de desconto — assinatura de {format_brl(company.effective_monthly_price)} "
+                                      "por mês.")
+    else:
+        messages.error(request, "Informe o código do cupom.")
+    return redirect("platform:company_detail", pk=pk)

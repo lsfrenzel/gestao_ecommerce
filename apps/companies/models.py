@@ -195,6 +195,114 @@ class Company(TimeStampedModel):
         setattr(self, field, value + 1)
         return value
 
+    # ---- Assinatura e cupom --------------------------------------------------------------
+    @property
+    def active_redemption(self) -> "CouponRedemption | None":
+        """Cupom em vigor (ativo e dentro do prazo de duração)."""
+        today = timezone.localdate()
+        return (self.coupon_redemptions.select_related("coupon")
+                .filter(is_active=True).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=today))
+                .first())
+
+    @property
+    def discount_percent(self) -> int:
+        redemption = self.active_redemption
+        return redemption.coupon.discount_percent if redemption else 0
+
+    @property
+    def effective_monthly_price(self) -> Decimal:
+        """Preço mensal da assinatura com o desconto do cupom vigente (valor informativo; sem cobrança)."""
+        if self.plan is None:
+            return Decimal("0")
+        price = self.plan.monthly_price * (Decimal(100) - Decimal(self.discount_percent)) / Decimal(100)
+        return price.quantize(Decimal("0.01"))
+
+
+class Coupon(TimeStampedModel):
+    """Cupom de desconto na assinatura do plano (50% ou 100%)."""
+
+    DISCOUNTS = [(50, "50% de desconto"), (100, "100% de desconto (gratuito)")]
+
+    code = models.CharField("código", max_length=30, unique=True,
+                            help_text="Letras, números e hífen. Será convertido para maiúsculas.")
+    description = models.CharField("descrição interna", max_length=160, blank=True)
+    discount_percent = models.PositiveSmallIntegerField("desconto", choices=DISCOUNTS, default=50)
+    duration_months = models.PositiveIntegerField(
+        "duração do desconto (meses)", null=True, blank=True,
+        help_text="Por quantos meses o desconto vale após o resgate. Vazio = permanente.")
+    valid_until = models.DateField("resgatável até", null=True, blank=True,
+                                   help_text="Último dia para resgatar o cupom. Vazio = sem prazo.")
+    max_redemptions = models.PositiveIntegerField("limite de usos", null=True, blank=True,
+                                                  help_text="Quantas empresas podem resgatar. Vazio = ilimitado.")
+    plans = models.ManyToManyField(Plan, blank=True, related_name="coupons", verbose_name="planos aceitos",
+                                   help_text="Vazio = vale para qualquer plano.")
+    is_active = models.BooleanField("ativo", default=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "cupom"
+        verbose_name_plural = "cupons"
+
+    def __str__(self) -> str:
+        return f"{self.code} ({self.discount_percent}%)"
+
+    def save(self, *args, **kwargs):
+        self.code = self.code.strip().upper()
+        super().save(*args, **kwargs)
+
+    @property
+    def times_redeemed(self) -> int:
+        return self.redemptions.count()
+
+    @property
+    def duration_label(self) -> str:
+        if not self.duration_months:
+            return "permanente"
+        return f"{self.duration_months} {'mês' if self.duration_months == 1 else 'meses'}"
+
+    def unavailable_reason(self, company: "Company | None" = None) -> str | None:
+        """Motivo para o cupom não poder ser resgatado agora (None = disponível)."""
+        if not self.is_active:
+            return "Este cupom está desativado."
+        if self.valid_until and self.valid_until < timezone.localdate():
+            return "Este cupom expirou."
+        if self.max_redemptions is not None and self.times_redeemed >= self.max_redemptions:
+            return "Este cupom atingiu o limite de usos."
+        if company is not None:
+            if self.redemptions.filter(company=company).exists():
+                return "Esta empresa já utilizou este cupom."
+            if self.plans.exists() and company.plan_id not in set(self.plans.values_list("id", flat=True)):
+                return "Este cupom não vale para o plano atual da empresa."
+        return None
+
+
+class CouponRedemption(TimeStampedModel):
+    coupon = models.ForeignKey(Coupon, on_delete=models.PROTECT, related_name="redemptions", verbose_name="cupom")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="coupon_redemptions",
+                                verbose_name="empresa")
+    redeemed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name="+", verbose_name="aplicado por")
+    applied_by_platform = models.BooleanField("aplicado pela plataforma", default=False)
+    expires_at = models.DateField("desconto válido até", null=True, blank=True)
+    is_active = models.BooleanField("ativo", default=True)
+    removed_at = models.DateTimeField("removido em", null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["company"], condition=models.Q(is_active=True),
+                                               name="uniq_active_coupon_per_company")]
+        verbose_name = "resgate de cupom"
+        verbose_name_plural = "resgates de cupom"
+
+    def __str__(self) -> str:
+        return f"{self.coupon.code} → {self.company}"
+
+    @property
+    def is_current(self) -> bool:
+        return self.is_active and (self.expires_at is None or self.expires_at >= timezone.localdate())
+
 
 class Membership(TimeStampedModel):
     class Role(models.TextChoices):

@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% load ui %}
+{% block title %}Assinatura{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Configurações</h1><div class="subtitle">Plano, valor da assinatura e cupons de desconto</div></div></div>
+{% include "companies/_tabs.html" %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-header">Sua assinatura</div><div class="card-body">
+      {% if company.plan %}
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <div class="small text-secondary">Plano</div>
+          <div class="fs-4 fw-bold text-navy">{{ company.plan.name }}</div>
+          <div class="small text-secondary">{{ company.get_status_display }}{% if company.status == "trial" and company.trial_ends_at %} até {{ company.trial_ends_at|date:"d/m/Y" }}{% endif %}</div>
+        </div>
+        <div class="text-end">
+          <div class="small text-secondary">Valor mensal</div>
+          {% if redemption %}<div class="text-secondary text-decoration-line-through small">{{ company.plan.monthly_price|brl }}</div>{% endif %}
+          <div class="fs-3 fw-bold {% if redemption %}text-positive{% else %}text-navy{% endif %}">{% if company.effective_monthly_price == 0 %}Grátis{% else %}{{ company.effective_monthly_price|brl }}{% endif %}</div>
+          <div class="small text-secondary">por mês</div>
+        </div>
+      </div>
+      {% if redemption %}
+      <div class="alert alert-success mt-3 mb-0 py-2"><i class="bi bi-ticket-perforated me-1"></i>
+        Cupom <strong>{{ redemption.coupon.code }}</strong> em vigor: <strong>{{ redemption.coupon.discount_percent }}% de desconto</strong>
+        {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}.</div>
+      {% endif %}
+      <hr>
+      <div class="small text-secondary">Usuários: {{ company.plan.max_users|default:"ilimitados" }} · Produtos: {{ company.plan.max_products|default:"ilimitados" }}</div>
+      <div class="mt-2">{% for f in company.plan.feature_labels %}<span class="badge badge-soft me-1 mb-1">{{ f }}</span>{% endfor %}</div>
+      {% else %}
+      <div class="text-secondary">Nenhum plano atribuído à empresa. Fale com o suporte da plataforma.</div>
+      {% endif %}
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-header">Resgatar cupom</div><div class="card-body">
+      {% if redemption %}
+      <p class="small text-secondary mb-0">A empresa já tem um cupom em vigor. Para trocar de cupom, fale com o suporte da plataforma.</p>
+      {% else %}
+      <form method="post" novalidate>{% csrf_token %}
+        {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+        <button class="btn btn-primary"><i class="bi bi-ticket-perforated me-1"></i>Aplicar cupom</button>
+      </form>
+      {% endif %}
+    </div></div>
+    {% if history %}
+    <div class="card"><div class="card-header">Histórico de cupons</div><ul class="list-group list-group-flush small">
+      {% for r in history %}<li class="list-group-item d-flex justify-content-between"><span><strong>{{ r.coupon.code }}</strong> · {{ r.coupon.discount_percent }}%</span>
+        <span class="text-secondary">{{ r.created_at|date:"d/m/Y" }} · {% if r.is_current %}em vigor{% else %}encerrado{% endif %}</span></li>{% endfor %}
+    </ul></div>
+    {% endif %}
+  </div>
+</div>
+<p class="small text-secondary mt-3"><i class="bi bi-info-circle me-1"></i>A cobrança recorrente ainda não está integrada: os valores acima são informativos.</p>
+{% endblock %}

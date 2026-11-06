@@ -8,6 +8,7 @@ urlpatterns = [
     path("empresa/cadastro/", views.onboarding, name="onboarding"),
     path("empresa/trocar/", views.switch_company, name="switch"),
     path("configuracoes/", views.settings_view, name="settings"),
+    path("configuracoes/assinatura/", views.subscription, name="subscription"),
     path("configuracoes/equipe/", views.team, name="team"),
     path("configuracoes/equipe/convidar/", views.invite_member, name="invite"),
     path("configuracoes/equipe/<int:pk>/", views.edit_member, name="edit_member"),

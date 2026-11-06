@@ -194,7 +194,8 @@ USE_TZ = True
 USE_THOUSAND_SEPARATOR = False
 
 # ---------------------------------------------------------------------------
-# Estáticos e mídia (imagens em armazenamento persistente S3-compatible)
+# Estáticos e mídia. Imagens enviadas vão para um armazenamento persistente:
+# Cloudinary (prioridade, se configurado) ou bucket S3-compatible. O disco do container é efêmero.
 # ---------------------------------------------------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -204,13 +205,34 @@ MEDIA_ROOT = Path(env("MEDIA_ROOT")) if env("MEDIA_ROOT") else BASE_DIR / "media
 # Sem S3 em produção, só sirva mídia do disco se houver um Railway Volume montado em MEDIA_ROOT.
 SERVE_MEDIA_FROM_DISK = env_bool("SERVE_MEDIA_FROM_DISK", False)
 
+# Cloudinary: cole a "API environment variable" do painel em CLOUDINARY_URL
+# (cloudinary://API_KEY:API_SECRET@CLOUD_NAME) ou use as três variáveis separadas.
+CLOUDINARY_URL = env("CLOUDINARY_URL").strip()
+CLOUDINARY_CLOUD_NAME = env("CLOUDINARY_CLOUD_NAME").strip()
+CLOUDINARY_API_KEY = env("CLOUDINARY_API_KEY").strip()
+CLOUDINARY_API_SECRET = env("CLOUDINARY_API_SECRET").strip()
+CLOUDINARY_FOLDER = env("CLOUDINARY_FOLDER", "frenzeltech-ecommerce").strip()
+if CLOUDINARY_URL and not CLOUDINARY_URL.startswith("cloudinary://"):
+    raise ImproperlyConfigured("CLOUDINARY_URL deve começar com cloudinary:// (copie a “API environment variable” "
+                               "do painel do Cloudinary, sem o prefixo CLOUDINARY_URL=).")
+_partial_cloudinary = [CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]
+if not CLOUDINARY_URL and any(_partial_cloudinary) and not all(_partial_cloudinary):
+    raise ImproperlyConfigured("Cloudinary incompleto: informe CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e "
+                               "CLOUDINARY_API_SECRET (ou apenas CLOUDINARY_URL).")
+USE_CLOUDINARY = bool(CLOUDINARY_URL or all(_partial_cloudinary))
+
 S3_BUCKET_NAME = env("S3_BUCKET_NAME")
-USE_S3 = bool(S3_BUCKET_NAME)
+USE_S3 = bool(S3_BUCKET_NAME) and not USE_CLOUDINARY
 _static_backend = (
     "django.contrib.staticfiles.storage.StaticFilesStorage"
     if (DEBUG or TESTING) else "whitenoise.storage.CompressedManifestStaticFilesStorage"
 )
-if USE_S3:
+if USE_CLOUDINARY:
+    STORAGES = {
+        "default": {"BACKEND": "apps.core.cloudinary_storage.CloudinaryMediaStorage"},
+        "staticfiles": {"BACKEND": _static_backend},
+    }
+elif USE_S3:
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",
@@ -237,6 +259,12 @@ else:
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {"BACKEND": _static_backend},
     }
+
+if PRODUCTION and not (USE_CLOUDINARY or USE_S3 or SERVE_MEDIA_FROM_DISK):
+    import sys
+
+    print("AVISO: nenhum armazenamento persistente de imagens configurado (CLOUDINARY_URL ou S3_*). "
+          "Imagens enviadas serão perdidas a cada deploy.", file=sys.stderr)
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

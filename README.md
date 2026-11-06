@@ -158,10 +158,15 @@ Localmente os testes rodam em SQLite se `DATABASE_URL` não estiver definida; o 
    - `DJANGO_DEBUG=0`
    - `DJANGO_ALLOWED_HOSTS` e `DJANGO_CSRF_TRUSTED_ORIGINS` (o domínio `*.up.railway.app` é incluído automaticamente)
    - E-mail SMTP (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`) para recuperação de senha e convites
-4. **Imagens dos produtos (armazenamento persistente):** o disco do container é efêmero. Adicione um
-   **Bucket** no Railway (ou use Cloudflare R2/AWS S3) e preencha `S3_BUCKET_NAME`, `S3_ENDPOINT_URL`,
-   `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION`. As imagens são servidas com URLs assinadas.
-   Alternativa: Railway Volume montado em `MEDIA_ROOT` + `SERVE_MEDIA_FROM_DISK=1` (apenas 1 réplica).
+4. **Imagens dos produtos (armazenamento persistente):** o disco do container é efêmero.
+   - **Cloudinary (recomendado):** no painel do Cloudinary, em *API Keys*, copie a **API environment variable**
+     e cadastre `CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME` (só o valor, sem repetir o nome).
+     Ou cadastre as três variáveis `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` e `CLOUDINARY_API_SECRET`.
+     Opcional: `CLOUDINARY_FOLDER` (padrão `frenzeltech-ecommerce`). As imagens são entregues por HTTPS com
+     formato e qualidade otimizados automaticamente (`f_auto`, `q_auto`).
+   - **Alternativa S3** (usada só sem Cloudinary): Railway Bucket, R2 ou AWS S3 com as variáveis `S3_*`
+     (URLs assinadas).
+   - Última opção: Railway Volume montado em `MEDIA_ROOT` + `SERVE_MEDIA_FROM_DISK=1` (apenas 1 réplica).
 5. Deploy: ao iniciar, `scripts/start.sh` executa `migrate`, `setup_plans` e `ensure_superadmin` e só então
    sobe o Gunicorn. O `/healthz` responde 503 se o banco estiver inacessível ou houver migração pendente.
    Remova qualquer *Custom Start Command* configurado no painel para usar o do `railway.json`.

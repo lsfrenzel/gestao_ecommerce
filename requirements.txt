@@ -8,3 +8,4 @@ django-storages[s3]==1.14.6
 boto3==1.43.124
 Pillow==13.0.0
 reportlab==5.1.0
+cloudinary==1.47.0

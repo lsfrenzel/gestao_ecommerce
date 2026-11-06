@@ -27,8 +27,10 @@ def _check(request, module=None, manager=False, admin=False, feature=None):
     company = membership.company
     if company.is_suspended:
         return render(request, "companies/suspended.html", {"company": company}, status=403)
-    if module and not membership.can(module):
-        raise PermissionDenied("Seu perfil não tem acesso a este módulo.")
+    if module:
+        modules = (module,) if isinstance(module, str) else tuple(module)
+        if not any(membership.can(m) for m in modules):  # basta acesso a um dos módulos
+            raise PermissionDenied("Seu perfil não tem acesso a este módulo.")
     if admin and not membership.is_admin:
         raise PermissionDenied("Ação restrita ao administrador da empresa.")
     if manager and not membership.is_manager_or_admin:

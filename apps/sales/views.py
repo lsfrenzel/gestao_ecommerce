@@ -68,8 +68,12 @@ def order_form(request, pk=None):
         return redirect("sales:detail", pk=order.pk)
     initial_items = [{"product": i.product_id, "quantity": i.quantity, "unit_price": i.unit_price,
                       "discount": i.discount} for i in order.items.all()] if order else []
-    form = SalesOrderForm(request.POST or None, instance=order, company=company,
-                          initial={"order_date": timezone.localdate()} if not order else None)
+    initial = None
+    if not order:
+        initial = {"order_date": timezone.localdate()}
+        if request.GET.get("cliente", "").isdigit():  # “Nova venda” a partir da ficha do cliente
+            initial["customer"] = int(request.GET["cliente"])
+    form = SalesOrderForm(request.POST or None, instance=order, company=company, initial=initial)
     formset = OrderItemFormSet(request.POST or None, prefix="items", form_kwargs={"company": company},
                                initial=initial_items or None)
     if request.method == "POST" and form.is_valid() and formset.is_valid():

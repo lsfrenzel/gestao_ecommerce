@@ -36,7 +36,7 @@
         {% if form.initial_status %}{% include "partials/field.html" with field=form.initial_status %}{% endif %}
         {% include "partials/field.html" with field=form.order_date %}
         {% include "partials/field.html" with field=form.customer %}
-        <div class="small mt-n2 mb-3"><a href="{% url 'customers:create' %}" target="_blank">+ cadastrar cliente</a></div>
+        {% if "customers" in allowed_modules %}<div class="small mt-n2 mb-3"><a href="{% url 'customers:create' %}" target="_blank" rel="noopener">+ cadastrar cliente (abre em nova aba)</a></div>{% endif %}
         {% include "partials/field.html" with field=form.channel %}
         {% include "partials/field.html" with field=form.external_reference %}
         {% include "partials/field.html" with field=form.payment_method %}

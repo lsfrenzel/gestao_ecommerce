@@ -55,7 +55,12 @@
 </form>
 {% endif %}
 <script>
-  (function () {
+  (function draw() {
+    // Na carga inicial da página o Chart.js ainda não foi carregado (scripts no fim do body): aguarda.
+    if (typeof makeChart === "undefined" || typeof Chart === "undefined") {
+      document.addEventListener("DOMContentLoaded", draw, {once: true});
+      return;
+    }
     const C = {{ chart|safe }};
     const prev = Chart.getChart("ch-price-curve"); if (prev) prev.destroy();
     makeChart("ch-price-curve", {type: "line", data: {labels: C.labels.map((l) => fmtBRL(l)), datasets: [

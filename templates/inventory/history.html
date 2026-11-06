@@ -26,7 +26,7 @@
     <td class="small">{{ m.get_kind_display }}</td>
     <td class="num {% if m.on_hand_delta|neg %}text-negative{% elif m.on_hand_delta %}text-positive{% else %}text-secondary{% endif %}">{% if m.on_hand_delta %}{{ m.on_hand_delta|qty }}{% else %}{{ m.reserved_delta|qty }} res.{% endif %}</td>
     <td class="num">{{ m.balance_after|qty }}</td><td class="num">{{ m.reserved_after|qty }}</td><td class="num">{{ m.unit_cost|brl }}</td>
-    <td class="small">{% if m.sales_order %}<a href="{% url 'sales:detail' m.sales_order_id %}">Pedido #{{ m.sales_order.number }}</a>{% elif m.purchase_order %}<a href="{% url 'purchasing:order_detail' m.purchase_order_id %}">Compra #{{ m.purchase_order.number }}</a>{% endif %} {{ m.note }}</td>
+    <td class="small">{% if m.sales_order %}{% if "sales" in allowed_modules %}<a href="{% url 'sales:detail' m.sales_order_id %}">Pedido #{{ m.sales_order.number }}</a>{% else %}Pedido #{{ m.sales_order.number }}{% endif %}{% elif m.purchase_order %}{% if "purchasing" in allowed_modules %}<a href="{% url 'purchasing:order_detail' m.purchase_order_id %}">Compra #{{ m.purchase_order.number }}</a>{% else %}Compra #{{ m.purchase_order.number }}{% endif %}{% endif %} {{ m.note }}</td>
     <td class="small">{{ m.user|default:"sistema" }}</td>
   </tr>{% empty %}<tr><td colspan="9"><div class="empty-state"><i class="bi bi-clock-history"></i>Nenhuma movimentação no período.</div></td></tr>{% endfor %}</tbody>
 </table></div></div>

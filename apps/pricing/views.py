@@ -100,9 +100,15 @@ def calculator(request):
 
     form = PricingForm(instance=instance, initial=initial if instance is None else None, company=company)
     ctx = {"form": form, "simulation": instance}
+    # Simulação salva ou produto escolhido: mostra o resultado já calculado ao abrir a página.
+    prefill = None
     if instance is not None:
-        bound = PricingForm({**{f: getattr(instance, f) for f in PricingSimulation.INPUT_FIELDS},
-                             "name": instance.name, "product": instance.product_id or ""}, company=company)
+        prefill = {**{f: getattr(instance, f) for f in PricingSimulation.INPUT_FIELDS},
+                   "name": instance.name, "product": instance.product_id or ""}
+    elif "product" in initial:
+        prefill = {**{f: initial.get(f, 0) for f in PricingSimulation.INPUT_FIELDS}, **initial}
+    if prefill is not None:
+        bound = PricingForm(prefill, company=company)
         if bound.is_valid():
             ctx.update(_compute(bound))
     return render(request, "pricing/calculator.html", ctx)

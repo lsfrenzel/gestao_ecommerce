@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from django.db.models import Q
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.core.money import ZERO
@@ -18,9 +18,24 @@ from apps.sales.models import SalesOrder
 from . import metrics
 
 
-@company_view("dashboard")
+MODULE_HOME = {
+    "products": "products:list", "pricing": "pricing:calculator", "inventory": "inventory:overview",
+    "reorder": "inventory:reorder", "suppliers": "purchasing:suppliers", "purchasing": "purchasing:orders",
+    "sales": "sales:list", "customers": "customers:list", "finance": "finance:overview",
+    "marketing": "marketing:list", "reports": "reports:index", "settings": "companies:settings",
+}
+
+
+@company_view()
 def home(request):
     company = request.company
+    if not request.membership.can("dashboard"):
+        # Página inicial (login, logotipo) de quem não tem o dashboard: primeiro módulo liberado.
+        for module in request.membership.allowed_modules():
+            if module in MODULE_HOME:
+                return redirect(MODULE_HOME[module])
+        return render(request, "errors/403.html", {"reason": "Nenhum módulo liberado para o seu usuário. "
+                                                             "Fale com o administrador da empresa."}, status=403)
     period = resolve_period(request.GET, default="30d")
     kpis = metrics.sales_kpis(company, period.start, period.end)
     previous = period.previous()

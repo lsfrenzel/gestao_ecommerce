@@ -20,7 +20,7 @@
 <div class="formula small mb-3">Conversão = pedidos ÷ visitantes × 100 · CPC = investimento ÷ cliques · CAC = investimento ÷ novos clientes · ROAS = receita atribuída ÷ investimento. Indicadores sem base (divisão por zero) aparecem como “—”.</div>
 <div class="card"><div class="card-header">Pedidos vinculados</div><div class="table-responsive"><table class="table table-sm">
   <thead><tr><th>Pedido</th><th>Data</th><th>Cliente</th><th class="num">Total</th></tr></thead>
-  <tbody>{% for o in orders %}<tr><td><a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.customer|default:"—" }}</td><td class="num">{{ o.total|brl }}</td></tr>
+  <tbody>{% for o in orders %}<tr><td>{% if "sales" in allowed_modules %}<a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a>{% else %}#{{ o.number }}{% endif %}</td><td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.customer|default:"—" }}</td><td class="num">{{ o.total|brl }}</td></tr>
   {% empty %}<tr><td colspan="4" class="text-secondary text-center py-3">Nenhum pedido vinculado. Selecione a campanha ao registrar a venda.</td></tr>{% endfor %}</tbody>
 </table></div></div>
 {% endblock %}

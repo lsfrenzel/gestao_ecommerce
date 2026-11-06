@@ -165,6 +165,7 @@ class CategoryList(TenantListView):
     create_url_name = "finance:category_new"
     edit_url_name = "finance:category_edit"
     delete_url_name = "finance:category_delete"
+    locked_attr = "is_system"
 
 
 class CategoryCreate(TenantCreateView):

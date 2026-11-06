@@ -11,7 +11,7 @@
   <div class="col-lg-8">
     <div class="card mb-3"><div class="table-responsive"><table class="table">
       <thead><tr><th>Produto</th><th class="num">Qtd.</th><th class="num">Preço un.</th><th class="num">Desconto</th><th class="num">Total</th><th class="num">Custo</th></tr></thead>
-      <tbody>{% for i in items %}<tr><td><a href="{% url 'products:detail' i.product.pk %}">{{ i.product.name }}</a><div class="small text-secondary">{{ i.product.sku }}</div></td>
+      <tbody>{% for i in items %}<tr><td>{% if "products" in allowed_modules %}<a href="{% url 'products:detail' i.product.pk %}">{{ i.product.name }}</a>{% else %}{{ i.product.name }}{% endif %}<div class="small text-secondary">{{ i.product.sku }}</div></td>
         <td class="num">{{ i.quantity|qty }}</td><td class="num">{{ i.unit_price|brl }}</td><td class="num">{{ i.discount|brl }}</td><td class="num fw-semibold">{{ i.total|brl }}</td><td class="num text-secondary">{{ i.cost_total|brl }}</td></tr>{% endfor %}</tbody>
     </table></div></div>
     <div class="row g-3 mb-3">
@@ -56,9 +56,9 @@
     </div></div>
     {% endif %}
     <div class="card mb-3"><div class="card-header">Cliente</div><div class="card-body small">
-      {% if order.customer %}<a class="fw-semibold" href="{% url 'customers:detail' order.customer.pk %}">{{ order.customer }}</a><div>{{ order.customer.email }}</div><div>{{ order.customer.phone }}</div>{% else %}<span class="text-secondary">Venda sem cliente identificado.</span>{% endif %}
+      {% if order.customer %}{% if "customers" in allowed_modules %}<a class="fw-semibold" href="{% url 'customers:detail' order.customer.pk %}">{{ order.customer }}</a>{% else %}<span class="fw-semibold">{{ order.customer }}</span>{% endif %}<div>{{ order.customer.email }}</div><div>{{ order.customer.phone }}</div>{% else %}<span class="text-secondary">Venda sem cliente identificado.</span>{% endif %}
     </div></div>
-    {% if order.campaign %}<div class="card mb-3"><div class="card-body small">Campanha: <a href="{% url 'marketing:detail' order.campaign.pk %}">{{ order.campaign }}</a></div></div>{% endif %}
+    {% if order.campaign %}<div class="card mb-3"><div class="card-body small">Campanha: {% if "marketing" in allowed_modules %}<a href="{% url 'marketing:detail' order.campaign.pk %}">{{ order.campaign }}</a>{% else %}{{ order.campaign }}{% endif %}</div></div>{% endif %}
     {% if order.notes %}<div class="card"><div class="card-header">Observações</div><div class="card-body small">{{ order.notes|linebreaksbr }}</div></div>{% endif %}
     <div class="small text-secondary mt-2">Criado por {{ order.created_by|default:"integração" }} em {{ order.created_at|date:"d/m/Y H:i" }}{% if order.paid_at %} · pago em {{ order.paid_at|date:"d/m/Y H:i" }}{% endif %}</div>
   </div>

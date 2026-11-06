@@ -67,6 +67,7 @@ class TenantListView(CompanyScopedMixin, generic.ListView):
     delete_url_name: str | None = None
     filters: list[tuple[str, str, list]] = []  # (parâmetro, rótulo, choices)
     extra_actions: list[tuple[str, str, str]] = []  # (url_name, rótulo, ícone)
+    locked_attr: str | None = None  # atributo que, se verdadeiro, impede editar/excluir a linha
     empty_message = "Nenhum registro encontrado."
 
     def get_queryset(self):
@@ -102,6 +103,7 @@ class TenantListView(CompanyScopedMixin, generic.ListView):
             extra_actions=self.extra_actions,
             empty_message=self.empty_message,
             can_delete=self.membership.is_manager_or_admin,
+            locked_attr=self.locked_attr or "",
         )
         return ctx
 

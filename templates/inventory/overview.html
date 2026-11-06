@@ -6,7 +6,7 @@
   <div><h1>Estoque</h1><div class="subtitle">Saldo físico, reservas de pedidos e disponível</div></div>
   <div class="d-flex flex-wrap gap-2">
     <a class="btn btn-outline-primary" href="{% qs exportar='csv' page='' %}"><i class="bi bi-download me-1"></i>CSV</a>
-    {% if current_company.multi_warehouse_enabled %}<a class="btn btn-outline-primary" href="{% url 'inventory:transfer' %}"><i class="bi bi-arrow-left-right me-1"></i>Transferir</a>{% endif %}
+    {% if current_company.multi_warehouse_enabled and current_membership.is_manager_or_admin %}<a class="btn btn-outline-primary" href="{% url 'inventory:transfer' %}"><i class="bi bi-arrow-left-right me-1"></i>Transferir</a>{% endif %}
     <a class="btn btn-primary" href="{% url 'inventory:move' %}"><i class="bi bi-plus-slash-minus me-1"></i>Nova movimentação</a>
   </div>
 </div>

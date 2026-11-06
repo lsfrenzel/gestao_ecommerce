@@ -16,7 +16,7 @@ def stock_alerts(company) -> dict[str, list]:
     products = list(Product.objects.for_company(company).filter(is_active=True).select_related("category"))
     idle_since = timezone.now() - timedelta(days=company.idle_stock_days)
     out = [p for p in products if p.stock_on_hand <= 0]
-    low = [p for p in products if p.stock_on_hand > 0 and p.available_stock <= p.min_stock]
+    low = [p for p in products if p.stock_status == "low"]
     excess = [p for p in products if p.max_stock is not None and p.stock_on_hand > p.max_stock]
     idle = [p for p in products if p.stock_on_hand > 0 and (p.last_movement_at is None
                                                             or p.last_movement_at < idle_since)]
@@ -35,8 +35,10 @@ def alert_counts(company) -> dict[str, int]:
     idle_since = timezone.now() - timedelta(days=company.idle_stock_days)
     counts = {
         "out": base.filter(stock_on_hand__lte=0).count(),
-        "low": base.filter(stock_on_hand__gt=0, min_stock__gt=0)
-                   .filter(stock_on_hand__lte=F("stock_reserved") + F("min_stock")).count(),
+        # mesma regra de Product.stock_status == "low"
+        "low": base.filter(stock_on_hand__gt=0).filter(
+            Q(stock_on_hand__lte=F("stock_reserved"))
+            | Q(min_stock__gt=0, stock_on_hand__lte=F("stock_reserved") + F("min_stock"))).count(),
         "excess": base.filter(max_stock__isnull=False, stock_on_hand__gt=F("max_stock")).count(),
         "idle": base.filter(stock_on_hand__gt=0).filter(Q(last_movement_at__isnull=True)
                                                         | Q(last_movement_at__lt=idle_since)).count(),

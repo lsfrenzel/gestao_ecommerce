@@ -5,7 +5,7 @@
 <div class="page-header">
   <div><h1>{{ supplier.name }}</h1><div class="subtitle">{{ supplier.cnpj|default:"CNPJ não informado" }}{% if not supplier.is_active %} · inativo{% endif %}</div></div>
   <div class="d-flex gap-2">
-    {% if "purchasing" in allowed_modules %}<a class="btn btn-outline-primary" href="{% url 'purchasing:order_new' %}?fornecedor={{ supplier.pk }}"><i class="bi bi-cart-plus me-1"></i>Novo pedido de compra</a>{% endif %}
+    {% if "purchasing" in allowed_modules and current_membership.is_manager_or_admin %}<a class="btn btn-outline-primary" href="{% url 'purchasing:order_new' %}?fornecedor={{ supplier.pk }}"><i class="bi bi-cart-plus me-1"></i>Novo pedido de compra</a>{% endif %}
     <a class="btn btn-primary" href="{% url 'purchasing:supplier_edit' supplier.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>
   </div>
 </div>
@@ -21,7 +21,7 @@
 </div>
 <div class="card"><div class="card-header">Histórico de compras</div><div class="table-responsive"><table class="table table-sm table-hover">
   <thead><tr><th>Pedido</th><th>Data</th><th>Previsão</th><th>Status</th><th class="num">Total</th></tr></thead>
-  <tbody>{% for o in orders %}<tr><td><a href="{% url 'purchasing:order_detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.expected_date|date:"d/m/Y"|default:"—" }}</td><td>{{ o.get_status_display }}</td><td class="num">{{ o.total|brl }}</td></tr>
+  <tbody>{% for o in orders %}<tr><td>{% if "purchasing" in allowed_modules %}<a href="{% url 'purchasing:order_detail' o.pk %}">#{{ o.number }}</a>{% else %}#{{ o.number }}{% endif %}</td><td>{{ o.order_date|date:"d/m/Y" }}</td><td>{{ o.expected_date|date:"d/m/Y"|default:"—" }}</td><td>{{ o.get_status_display }}</td><td class="num">{{ o.total|brl }}</td></tr>
   {% empty %}<tr><td colspan="5" class="text-secondary text-center py-3">Nenhuma compra registrada.</td></tr>{% endfor %}</tbody>
 </table></div></div>
 {% endblock %}

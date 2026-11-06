@@ -11,6 +11,13 @@ def company(request):
         alerts = alert_counts(membership.company)
     except Exception:  # noqa: BLE001 — o menu nunca deve derrubar a página
         alerts = {}
+    # O sino só conta alertas dos módulos que o usuário pode abrir.
+    allowed = membership.allowed_modules()
+    if "inventory" not in allowed:
+        alerts.update(out=0, low=0, excess=0, idle=0)
+    if "finance" not in allowed:
+        alerts["overdue"] = 0
+    alerts["total"] = alerts.get("out", 0) + alerts.get("low", 0) + alerts.get("overdue", 0)
     return {
         "current_company": membership.company,
         "current_membership": membership,

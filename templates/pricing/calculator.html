@@ -14,7 +14,7 @@
       <div class="card mb-3"><div class="card-body"><div class="row">
         {% include "partials/field.html" with field=form.product col="col-md-7" %}
         {% include "partials/field.html" with field=form.name col="col-md-5" %}
-        <div class="col-12"><div class="form-text mt-n2 mb-1">Ao escolher um produto, use <a href="#" onclick="const v=document.getElementById('id_product').value; if(v){window.location='?produto='+v;} return false;">carregar custos do cadastro</a>.</div></div>
+        <div class="col-12"><div class="form-text mt-n2 mb-1">Ao escolher um produto, os custos do cadastro, os impostos e a margem padrão da empresa são carregados automaticamente.</div></div>
       </div></div></div>
       <div class="card mb-3"><div class="card-header">1. Custos do produto (R$ por unidade)</div><div class="card-body"><div class="row">
         {% include "partials/field.html" with field=form.acquisition_cost col="col-6" %}
@@ -50,4 +50,13 @@
   </div>
   <div class="col-xl-7"><div id="results">{% include "pricing/_results.html" %}</div></div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Trocar o produto recarrega a calculadora com os custos dele (antes que o HTMX recalcule com os valores antigos).
+  document.getElementById("id_product")?.addEventListener("change", function (e) {
+    e.stopPropagation();
+    window.location = this.value ? "?produto=" + this.value : "?";
+  });
+</script>
 {% endblock %}

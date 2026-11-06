@@ -100,7 +100,7 @@ def product_edit(request, pk):
                                                   "product": product})
 
 
-@company_view("products")
+@company_view(("products", "inventory", "reorder"))
 def product_detail(request, pk):
     product = get_tenant_object(Product, request.company, pk=pk)
     reorder = build_rows(request.company, [product])[0]

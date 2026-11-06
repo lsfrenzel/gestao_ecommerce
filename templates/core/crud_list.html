@@ -35,8 +35,9 @@
           {% endfor %}
           <td class="text-end text-nowrap">
             {% if detail_url_name %}<a class="btn btn-sm btn-light" href="{% url detail_url_name obj.pk %}" title="Ver"><i class="bi bi-eye"></i></a>{% endif %}
+            {% if locked_attr and obj|attr:locked_attr %}<span class="small text-secondary" title="Registro padrão do sistema"><i class="bi bi-lock"></i> padrão</span>{% else %}
             {% if edit_url_name %}<a class="btn btn-sm btn-light" href="{% url edit_url_name obj.pk %}" title="Editar"><i class="bi bi-pencil"></i></a>{% endif %}
-            {% if delete_url_name and can_delete %}<a class="btn btn-sm btn-light text-danger" href="{% url delete_url_name obj.pk %}" title="Excluir"><i class="bi bi-trash"></i></a>{% endif %}
+            {% if delete_url_name and can_delete %}<a class="btn btn-sm btn-light text-danger" href="{% url delete_url_name obj.pk %}" title="Excluir"><i class="bi bi-trash"></i></a>{% endif %}{% endif %}
           </td>
         </tr>
       {% empty %}

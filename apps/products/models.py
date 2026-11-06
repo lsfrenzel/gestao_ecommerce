@@ -131,7 +131,8 @@ class Product(TenantModel):
     def stock_status(self) -> str:
         if self.stock_on_hand <= 0:
             return "out"
-        if self.available_stock <= self.min_stock:
+        # Baixo: disponível ≤ mínimo (com mínimo definido) ou tudo reservado (nada disponível para venda).
+        if self.available_stock <= 0 or (self.min_stock > 0 and self.available_stock <= self.min_stock):
             return "low"
         if self.max_stock is not None and self.stock_on_hand > self.max_stock:
             return "excess"

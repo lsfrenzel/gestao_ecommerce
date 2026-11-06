@@ -21,7 +21,7 @@
   <thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th class="num">Valor</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
   <tbody>{% for e in page_obj %}<tr>
     <td class="{% if e.is_overdue %}text-danger fw-semibold{% endif %}">{{ e.due_date|date:"d/m/Y" }}</td>
-    <td>{{ e.description }}<div class="small text-secondary">{{ e.counterparty }}{% if e.sales_order_id %} · <a href="{% url 'sales:detail' e.sales_order_id %}">pedido</a>{% endif %}{% if e.purchase_order_id %} · <a href="{% url 'purchasing:order_detail' e.purchase_order_id %}">compra</a>{% endif %}</div></td>
+    <td>{{ e.description }}<div class="small text-secondary">{{ e.counterparty }}{% if e.sales_order_id and "sales" in allowed_modules %} · <a href="{% url 'sales:detail' e.sales_order_id %}">pedido</a>{% endif %}{% if e.purchase_order_id and "purchasing" in allowed_modules %} · <a href="{% url 'purchasing:order_detail' e.purchase_order_id %}">compra</a>{% endif %}</div></td>
     <td class="small">{{ e.category.name }}</td><td class="num fw-semibold">{{ e.amount|brl }}</td>
     <td class="small">{% if e.status == "settled" %}<span class="badge status-ok">Liquidado</span> {{ e.settled_at|date:"d/m/Y" }}{% elif e.status == "cancelled" %}<span class="badge text-bg-secondary">Cancelado</span>{% elif e.is_overdue %}<span class="badge status-out">Vencido</span>{% else %}<span class="badge status-low">Em aberto</span>{% endif %}</td>
     <td class="text-end text-nowrap">

@@ -5,7 +5,7 @@
 <div class="page-header">
   <div><h1>{{ customer.name }}</h1><div class="subtitle">Cliente desde {{ customer.created_at|date:"d/m/Y" }}{% if customer.anonymized_at %} · <span class="text-danger">anonimizado em {{ customer.anonymized_at|date:"d/m/Y" }}</span>{% endif %}</div></div>
   <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'sales:create' %}"><i class="bi bi-bag-plus me-1"></i>Nova venda</a>
+    {% if "sales" in allowed_modules %}<a class="btn btn-outline-primary" href="{% url 'sales:create' %}?cliente={{ customer.pk }}"><i class="bi bi-bag-plus me-1"></i>Nova venda</a>{% endif %}
     {% if not customer.anonymized_at %}<a class="btn btn-primary" href="{% url 'customers:edit' customer.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>{% endif %}
   </div>
 </div>
@@ -36,7 +36,7 @@
   </div>
   <div class="col-lg-8"><div class="card"><div class="card-header">Histórico de pedidos</div><div class="table-responsive"><table class="table table-hover table-sm">
     <thead><tr><th>Pedido</th><th>Data</th><th>Canal</th><th>Status</th><th class="num">Total</th></tr></thead>
-    <tbody>{% for o in orders %}<tr><td><a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a></td><td>{{ o.order_date|date:"d/m/Y" }}</td><td class="small">{{ o.get_channel_display }}</td><td><span class="badge text-bg-{{ o.status_color }}">{{ o.get_status_display }}</span></td><td class="num">{{ o.total|brl }}</td></tr>
+    <tbody>{% for o in orders %}<tr><td>{% if "sales" in allowed_modules %}<a href="{% url 'sales:detail' o.pk %}">#{{ o.number }}</a>{% else %}#{{ o.number }}{% endif %}</td><td>{{ o.order_date|date:"d/m/Y" }}</td><td class="small">{{ o.get_channel_display }}</td><td><span class="badge text-bg-{{ o.status_color }}">{{ o.get_status_display }}</span></td><td class="num">{{ o.total|brl }}</td></tr>
     {% empty %}<tr><td colspan="5" class="text-secondary text-center py-3">Nenhum pedido.</td></tr>{% endfor %}</tbody>
   </table></div></div></div>
 </div>

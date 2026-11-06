@@ -64,13 +64,13 @@
           </button>
           <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:300px">
             <div class="px-3 py-2 border-bottom fw-semibold">Notificações</div>
-            {% if alerts.out %}<a class="dropdown-item py-2" href="{% url 'inventory:alerts' %}#esgotados"><i class="bi bi-x-octagon text-danger me-2"></i>{{ alerts.out }} produto(s) esgotado(s)</a>{% endif %}
+            {% if "inventory" in allowed_modules %}{% if alerts.out %}<a class="dropdown-item py-2" href="{% url 'inventory:alerts' %}#esgotados"><i class="bi bi-x-octagon text-danger me-2"></i>{{ alerts.out }} produto(s) esgotado(s)</a>{% endif %}
             {% if alerts.low %}<a class="dropdown-item py-2" href="{% url 'inventory:alerts' %}#baixo"><i class="bi bi-exclamation-triangle text-warning me-2"></i>{{ alerts.low }} com estoque baixo</a>{% endif %}
             {% if alerts.excess %}<a class="dropdown-item py-2" href="{% url 'inventory:alerts' %}#excesso"><i class="bi bi-stack text-primary me-2"></i>{{ alerts.excess }} com excesso de estoque</a>{% endif %}
-            {% if alerts.idle %}<a class="dropdown-item py-2" href="{% url 'inventory:alerts' %}#parados"><i class="bi bi-hourglass-split text-secondary me-2"></i>{{ alerts.idle }} sem movimentação</a>{% endif %}
-            {% if alerts.overdue %}<a class="dropdown-item py-2" href="{% url 'finance:entries' 'pagar' %}?situacao=vencidos"><i class="bi bi-calendar-x text-danger me-2"></i>{{ alerts.overdue }} conta(s) vencida(s)</a>{% endif %}
+            {% if alerts.idle %}<a class="dropdown-item py-2" href="{% url 'inventory:alerts' %}#parados"><i class="bi bi-hourglass-split text-secondary me-2"></i>{{ alerts.idle }} sem movimentação</a>{% endif %}{% endif %}
+            {% if alerts.overdue and "finance" in allowed_modules %}<a class="dropdown-item py-2" href="{% url 'finance:entries' 'pagar' %}?situacao=vencidos"><i class="bi bi-calendar-x text-danger me-2"></i>{{ alerts.overdue }} conta(s) vencida(s)</a>{% endif %}
             {% if not alerts.out and not alerts.low and not alerts.excess and not alerts.idle and not alerts.overdue %}<div class="px-3 py-3 text-secondary small">Nenhum alerta no momento.</div>{% endif %}
-            <a class="dropdown-item small text-center border-top py-2" href="{% url 'inventory:alerts' %}">Ver todos os alertas</a>
+            {% if "inventory" in allowed_modules %}<a class="dropdown-item small text-center border-top py-2" href="{% url 'inventory:alerts' %}">Ver todos os alertas</a>{% endif %}
           </div>
         </div>
         {% if "settings" in allowed_modules %}

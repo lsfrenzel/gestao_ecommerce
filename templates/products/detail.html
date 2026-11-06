@@ -5,10 +5,10 @@
 <div class="page-header">
   <div><h1>{{ product.name }}</h1><div class="subtitle">SKU {{ product.sku }} · {{ product.category|default:"Sem categoria" }}{% if not product.is_active %} · <span class="text-danger">arquivado</span>{% endif %}</div></div>
   <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'pricing:calculator' %}?produto={{ product.pk }}"><i class="bi bi-calculator me-1"></i>Precificar</a>
-    <a class="btn btn-outline-primary" href="{% url 'inventory:move' %}?produto={{ product.pk }}"><i class="bi bi-arrow-left-right me-1"></i>Movimentar estoque</a>
-    <a class="btn btn-primary" href="{% url 'products:edit' product.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>
-    {% if current_membership.is_manager_or_admin %}
+    {% if "pricing" in allowed_modules %}<a class="btn btn-outline-primary" href="{% url 'pricing:calculator' %}?produto={{ product.pk }}"><i class="bi bi-calculator me-1"></i>Precificar</a>{% endif %}
+    {% if "inventory" in allowed_modules %}<a class="btn btn-outline-primary" href="{% url 'inventory:move' %}?produto={{ product.pk }}"><i class="bi bi-arrow-left-right me-1"></i>Movimentar estoque</a>{% endif %}
+    {% if "products" in allowed_modules %}<a class="btn btn-primary" href="{% url 'products:edit' product.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>{% endif %}
+    {% if current_membership.is_manager_or_admin and "products" in allowed_modules %}
     <form method="post" action="{% url 'products:toggle_active' product.pk %}" data-confirm="{% if product.is_active %}Arquivar este produto? Ele deixa de aparecer nas operações, mas o histórico é mantido.{% else %}Reativar este produto?{% endif %}">{% csrf_token %}
       <button class="btn btn-outline-secondary">{% if product.is_active %}<i class="bi bi-archive me-1"></i>Arquivar{% else %}Reativar{% endif %}</button></form>
     <a class="btn btn-outline-danger" href="{% url 'products:delete' product.pk %}"><i class="bi bi-trash"></i></a>
@@ -32,7 +32,7 @@
     <div class="d-flex justify-content-between"><span>Ponto de pedido</span><strong>{{ reorder.reorder_point|qty }}</strong></div>
     <div class="d-flex justify-content-between"><span>Cobertura atual</span><strong>{% if reorder.days_of_cover is not None %}{{ reorder.days_of_cover|num:1 }} dias{% else %}—{% endif %}</strong></div>
     {% if reorder.needs_reorder %}<div class="alert alert-danger py-2 mt-2 mb-0">Comprar agora: sugestão de <strong>{{ reorder.suggested_qty|qty }}</strong> {{ product.unit }}.</div>{% endif %}
-    <a class="d-block mt-2" href="{% url 'inventory:reorder_edit' product.pk %}">Ajustar parâmetros</a>
+    {% if "reorder" in allowed_modules %}<a class="d-block mt-2" href="{% url 'inventory:reorder_edit' product.pk %}">Ajustar parâmetros</a>{% endif %}
   </div></div></div>
   <div class="col-lg-4"><div class="card h-100"><div class="card-header">Vendas (últimos 90 dias)</div><div class="card-body small">
     {% if sales_90 %}
@@ -44,7 +44,7 @@
   </div></div></div>
   <div class="col-lg-4"><div class="card h-100"><div class="card-header">Dados</div><div class="card-body small">
     {% if product.image %}<img src="{{ product.image.url }}" class="img-fluid rounded mb-2" style="max-height:140px" alt="">{% endif %}
-    <div>Marca: {{ product.brand|default:"—" }}</div><div>Fornecedor: {% if product.supplier %}<a href="{% url 'purchasing:supplier_detail' product.supplier.pk %}">{{ product.supplier }}</a>{% else %}—{% endif %}</div>
+    <div>Marca: {{ product.brand|default:"—" }}</div><div>Fornecedor: {% if product.supplier and "suppliers" in allowed_modules %}<a href="{% url 'purchasing:supplier_detail' product.supplier.pk %}">{{ product.supplier }}</a>{% else %}{{ product.supplier|default:"—" }}{% endif %}</div>
     <div>Código de barras: {{ product.barcode|default:"—" }}</div><div>Mín./máx.: {{ product.min_stock|qty }} / {{ product.max_stock|qty }}</div>
     {% if product.description %}<p class="mt-2 mb-0 text-secondary">{{ product.description|linebreaksbr }}</p>{% endif %}
   </div></div></div>
@@ -58,14 +58,14 @@
       <td class="small">{{ h.reason }}</td></tr>
     {% empty %}<tr><td colspan="4" class="text-secondary text-center py-3">Sem alterações registradas.</td></tr>{% endfor %}</tbody>
   </table></div></div></div>
-  <div class="col-lg-6"><div class="card"><div class="card-header d-flex justify-content-between">Últimas movimentações <a class="small" href="{% url 'inventory:history' %}?produto={{ product.pk }}&period=year">ver histórico</a></div><div class="table-responsive"><table class="table table-sm">
+  <div class="col-lg-6"><div class="card"><div class="card-header d-flex justify-content-between">Últimas movimentações {% if "inventory" in allowed_modules %}<a class="small" href="{% url 'inventory:history' %}?produto={{ product.pk }}&period=year">ver histórico</a>{% endif %}</div><div class="table-responsive"><table class="table table-sm">
     <thead><tr><th>Data</th><th>Tipo</th><th class="num">Qtd.</th><th class="num">Saldo</th></tr></thead>
-    <tbody>{% for m in movements %}<tr><td class="small">{{ m.created_at|date:"d/m/Y H:i" }}</td><td class="small">{{ m.get_kind_display }}{% if m.sales_order %} · <a href="{% url 'sales:detail' m.sales_order_id %}">#{{ m.sales_order.number }}</a>{% endif %}{% if m.purchase_order %} · <a href="{% url 'purchasing:order_detail' m.purchase_order_id %}">compra #{{ m.purchase_order.number }}</a>{% endif %}</td>
+    <tbody>{% for m in movements %}<tr><td class="small">{{ m.created_at|date:"d/m/Y H:i" }}</td><td class="small">{{ m.get_kind_display }}{% if m.sales_order %} · {% if "sales" in allowed_modules %}<a href="{% url 'sales:detail' m.sales_order_id %}">#{{ m.sales_order.number }}</a>{% else %}#{{ m.sales_order.number }}{% endif %}{% endif %}{% if m.purchase_order %} · {% if "purchasing" in allowed_modules %}<a href="{% url 'purchasing:order_detail' m.purchase_order_id %}">compra #{{ m.purchase_order.number }}</a>{% else %}compra #{{ m.purchase_order.number }}{% endif %}{% endif %}</td>
       <td class="num {% if m.on_hand_delta|neg %}text-negative{% else %}text-positive{% endif %}">{% if m.on_hand_delta %}{{ m.on_hand_delta|qty }}{% else %}<span class="text-secondary">{{ m.reserved_delta|qty }} res.</span>{% endif %}</td><td class="num">{{ m.balance_after|qty }}</td></tr>
     {% empty %}<tr><td colspan="4" class="text-secondary text-center py-3">Nenhuma movimentação.</td></tr>{% endfor %}</tbody>
   </table></div></div></div>
 </div>
-{% if simulations %}<div class="card mt-3"><div class="card-header">Simulações de preço deste produto</div><ul class="list-group list-group-flush">
+{% if simulations and "pricing" in allowed_modules %}<div class="card mt-3"><div class="card-header">Simulações de preço deste produto</div><ul class="list-group list-group-flush">
   {% for s in simulations %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'pricing:calculator' %}?simulacao={{ s.pk }}">{{ s.name }}</a><span>sugerido {{ s.suggested_price|brl }} · {{ s.created_at|date:"d/m/Y" }}</span></li>{% endfor %}
 </ul></div>{% endif %}
 {% endblock %}

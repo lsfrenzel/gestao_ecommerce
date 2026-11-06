@@ -231,27 +231,35 @@ class Company(TimeStampedModel):
 
     @property
     def discount_percent(self) -> int:
+        """Desconto efetivo (%) do cupom vigente sobre o plano atual (cupom de preço fixo convertido em %)."""
         redemption = self.active_redemption
-        return redemption.coupon.discount_percent if redemption else 0
+        if not redemption or self.plan is None:
+            return 0
+        return redemption.coupon.effective_percent(self.plan.monthly_price)
 
     @property
     def effective_monthly_price(self) -> Decimal:
-        """Preço mensal da assinatura com o desconto do cupom vigente (valor informativo; sem cobrança)."""
+        """Preço mensal da assinatura com o cupom vigente aplicado."""
         if self.plan is None:
             return Decimal("0")
-        price = self.plan.monthly_price * (Decimal(100) - Decimal(self.discount_percent)) / Decimal(100)
-        return price.quantize(Decimal("0.01"))
+        redemption = self.active_redemption
+        if redemption:
+            return redemption.coupon.price_for(self.plan.monthly_price)
+        return self.plan.monthly_price.quantize(Decimal("0.01"))
 
 
 class Coupon(TimeStampedModel):
-    """Cupom de desconto na assinatura do plano (50% ou 100%)."""
+    """Cupom da assinatura: 50% ou 100% de desconto, ou preço fixo mensal (ex.: R$ 1,00)."""
 
-    DISCOUNTS = [(50, "50% de desconto"), (100, "100% de desconto (gratuito)")]
+    FIXED = 0
+    DISCOUNTS = [(50, "50% de desconto"), (100, "100% de desconto (gratuito)"), (FIXED, "Preço fixo mensal")]
 
     code = models.CharField("código", max_length=30, unique=True,
                             help_text="Letras, números e hífen. Será convertido para maiúsculas.")
     description = models.CharField("descrição interna", max_length=160, blank=True)
-    discount_percent = models.PositiveSmallIntegerField("desconto", choices=DISCOUNTS, default=50)
+    discount_percent = models.PositiveSmallIntegerField("tipo de desconto", choices=DISCOUNTS, default=50)
+    fixed_price = models.DecimalField("preço fixo mensal (R$)", max_digits=10, decimal_places=2, null=True,
+                                      blank=True, help_text="Somente para cupons de preço fixo: valor cobrado por mês.")
     duration_months = models.PositiveIntegerField(
         "duração do desconto (meses)", null=True, blank=True,
         help_text="Por quantos meses o desconto vale após o resgate. Vazio = permanente.")
@@ -271,11 +279,49 @@ class Coupon(TimeStampedModel):
         verbose_name_plural = "cupons"
 
     def __str__(self) -> str:
-        return f"{self.code} ({self.discount_percent}%)"
+        return f"{self.code} ({self.short_label})"
 
     def save(self, *args, **kwargs):
         self.code = self.code.strip().upper()
+        if not self.is_fixed:
+            self.fixed_price = None
         super().save(*args, **kwargs)
+
+    # ---- valor ---------------------------------------------------------------------------
+    @property
+    def is_fixed(self) -> bool:
+        return self.discount_percent == self.FIXED
+
+    def price_for(self, full_price) -> Decimal:
+        """Valor mensal da assinatura com este cupom (nunca maior que o preço cheio)."""
+        full = Decimal(full_price or 0)
+        if self.is_fixed:
+            price = min(Decimal(self.fixed_price or 0), full)
+        else:
+            price = full * (Decimal(100) - Decimal(self.discount_percent)) / Decimal(100)
+        return price.quantize(Decimal("0.01"))
+
+    def effective_percent(self, full_price) -> int:
+        full = Decimal(full_price or 0)
+        if full <= 0:
+            return 0
+        return int(((full - self.price_for(full)) / full * 100).to_integral_value())
+
+    @property
+    def short_label(self) -> str:
+        """Ex.: “-50%”, “-100%” ou “R$ 1,00/mês”."""
+        from apps.core.money import format_brl
+
+        return f"{format_brl(self.fixed_price)}/mês" if self.is_fixed else f"-{self.discount_percent}%"
+
+    @property
+    def discount_label(self) -> str:
+        """Ex.: “50% de desconto” ou “preço fixo de R$ 1,00/mês”."""
+        from apps.core.money import format_brl
+
+        if self.is_fixed:
+            return f"preço fixo de {format_brl(self.fixed_price)}/mês"
+        return "100% de desconto (gratuito)" if self.discount_percent == 100 else f"{self.discount_percent}% de desconto"
 
     @property
     def times_redeemed(self) -> int:

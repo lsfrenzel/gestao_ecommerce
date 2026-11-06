@@ -81,7 +81,7 @@ def redeem_coupon(company: Company, code: str, *, user=None, request=None, by_pl
         coupon=coupon, company=company, redeemed_by=user, applied_by_platform=by_platform,
         expires_at=_add_months(today, coupon.duration_months) if coupon.duration_months else None)
     log_action("coupon.redeem", request=request, actor=user, company=company, target=company,
-               platform=by_platform, details={"cupom": coupon.code, "desconto": coupon.discount_percent,
+               platform=by_platform, details={"cupom": coupon.code, "desconto": coupon.discount_label,
                                               "valido_ate": str(redemption.expires_at or "permanente")})
     return redemption
 

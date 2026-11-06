@@ -31,7 +31,7 @@
       </div>
       {% if redemption %}
       <div class="alert alert-success py-2 small mt-2 mb-2"><i class="bi bi-ticket-perforated me-1"></i>
-        <a href="{% url 'platform:coupon_detail' redemption.coupon.pk %}" class="fw-semibold">{{ redemption.coupon.code }}</a> · {{ redemption.coupon.discount_percent }}% ·
+        <a href="{% url 'platform:coupon_detail' redemption.coupon.pk %}" class="fw-semibold">{{ redemption.coupon.code }}</a> · {{ redemption.coupon.discount_label }} ·
         {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}</div>
       <form method="post" action="{% url 'platform:company_coupon' company.pk %}" data-confirm="Remover o cupom desta empresa? A assinatura volta ao preço cheio.">{% csrf_token %}
         <input type="hidden" name="action" value="remover"><button class="btn btn-sm btn-outline-danger mb-3">Remover cupom</button></form>

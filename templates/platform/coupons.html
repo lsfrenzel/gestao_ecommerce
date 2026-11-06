@@ -2,7 +2,7 @@
 {% block title %}Cupons{% endblock %}
 {% block content %}
 <div class="page-header"><div><h1>Cupons de desconto</h1>
-  <div class="subtitle">Desconto de 50% ou 100% na assinatura · {{ stats.active }} cupom(ns) ativo(s) · {{ stats.companies }} empresa(s) com desconto em vigor</div></div>
+  <div class="subtitle">50% ou 100% de desconto, ou preço fixo mensal na assinatura · {{ stats.active }} cupom(ns) ativo(s) · {{ stats.companies }} empresa(s) com desconto em vigor</div></div>
   <a class="btn btn-primary" href="{% url 'platform:coupon_new' %}"><i class="bi bi-plus-lg me-1"></i>Criar cupom</a></div>
 <form method="get" class="filters d-flex flex-wrap gap-2">
   <input class="form-control" style="max-width:280px" type="search" name="q" value="{{ q }}" placeholder="Código ou descrição">
@@ -15,7 +15,7 @@
   <thead><tr><th>Código</th><th>Desconto</th><th>Duração</th><th>Resgatável até</th><th class="num">Usos</th><th>Planos</th><th>Situação</th></tr></thead>
   <tbody>{% for c in page_obj %}<tr>
     <td><a class="fw-semibold font-monospace" href="{% url 'platform:coupon_detail' c.pk %}">{{ c.code }}</a>{% if c.description %}<div class="small text-secondary">{{ c.description }}</div>{% endif %}</td>
-    <td><span class="badge {% if c.discount_percent == 100 %}text-bg-success{% else %}badge-soft{% endif %}">{{ c.discount_percent }}%</span></td>
+    <td><span class="badge {% if c.discount_percent == 100 or c.is_fixed %}text-bg-success{% else %}badge-soft{% endif %}">{{ c.short_label }}</span></td>
     <td class="small">{{ c.duration_label }}</td>
     <td class="small">{{ c.valid_until|date:"d/m/Y"|default:"sem prazo" }}</td>
     <td class="num">{{ c.uses }}{% if c.max_redemptions %} / {{ c.max_redemptions }}{% endif %}<div class="small text-secondary">{{ c.active_uses }} em vigor</div></td>

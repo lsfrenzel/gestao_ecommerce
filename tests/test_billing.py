@@ -89,20 +89,39 @@ class OnboardingPlanTests(BillingTestCase):
         self.assertEqual(self.client.get(reverse("products:list")).status_code, 402)
         self.assertEqual(self.client.get(reverse("companies:subscription")).status_code, 200)
 
-    def test_gateway_failure_keeps_company_and_shows_error(self):
+    def test_gateway_failure_starts_free_trial_instead_of_blocking(self):
         with mock.patch(GW + "create_preapproval", side_effect=gateway.GatewayError("recusado")):
             response = self.client.post(reverse("companies:onboarding"), self.form(str(self.basic.pk)), follow=True)
         self.assertContains(response, "recusado")
+        self.assertContains(response, "teste grátis")
         self.assertFalse(Subscription.objects.exists())
-        self.assertEqual(Company.objects.get().status, "pending")
+        company = Company.objects.get()
+        self.assertEqual(company.status, "trial")
+        self.assertTrue(company.has_access)
 
     @override_settings(MERCADOPAGO_ACCESS_TOKEN="")
-    def test_paid_plans_unavailable_without_credentials(self):
+    def test_paid_plans_selectable_without_credentials_fall_back_to_trial(self):
         response = self.client.get(reverse("companies:onboarding"))
-        self.assertContains(response, "ainda não está disponível")
-        response = self.client.post(reverse("companies:onboarding"), self.form(str(self.basic.pk)))
-        self.assertIn("plan_choice", response.context["form"].errors)
-        self.assertFalse(Company.objects.exists())
+        self.assertNotContains(response, 'disabled>')  # nenhum plano bloqueado
+        response = self.client.post(reverse("companies:onboarding"), self.form(str(self.basic.pk)), follow=True)
+        company = Company.objects.get()
+        self.assertEqual(company.status, "trial")
+        self.assertContains(response, "Não foi possível abrir o pagamento")
+
+    @override_settings(MERCADOPAGO_ACCESS_TOKEN="")
+    def test_credential_aliases(self):
+        import os
+
+        from django.conf import settings as dj
+
+        from config.settings import _credential
+
+        os.environ["MP_ACCESS_TOKEN"] = '"Bearer APP_USR-123"'
+        try:
+            self.assertEqual(_credential("MERCADOPAGO_ACCESS_TOKEN_INEXISTENTE", "MP_ACCESS_TOKEN"), "APP_USR-123")
+        finally:
+            del os.environ["MP_ACCESS_TOKEN"]
+        self.assertEqual(dj.MERCADOPAGO_ACCESS_TOKEN, "")
 
 
 class AccessTests(BillingTestCase):
@@ -333,3 +352,72 @@ class GatewayUnitTests(TestCase):
         self.assertEqual(payload["auto_recurring"], {"frequency": 1, "frequency_type": "months",
                                                      "transaction_amount": 49.9, "currency_id": "BRL"})
         self.assertEqual(payload["status"], "pending")
+
+
+class FixedPriceCouponTests(BillingTestCase):
+    """Cupom de preço fixo (ex.: R$ 1,00/mês)."""
+
+    def setUp(self):
+        super().setUp()
+        self.root = make_user(email="root-fixo@exemplo.test", is_superuser=True, is_staff=True)
+        self.company = make_company(plan=self.pro)
+        self.company.start_trial(self.pro)
+        self.company.trial_ends_at = None
+        self.company.status = Company.Status.PENDING
+        self.company.save()
+
+    def test_create_one_real_coupon_in_panel(self):
+        self.client.force_login(self.root)
+        response = self.client.post(reverse("platform:coupon_new"), {
+            "code": "UMREAL", "discount_percent": "0", "fixed_price": "1,00", "is_active": "on"})
+        coupon = Coupon.objects.get(code="UMREAL")
+        self.assertRedirects(response, reverse("platform:coupon_detail", args=[coupon.pk]))
+        self.assertTrue(coupon.is_fixed)
+        self.assertEqual(coupon.fixed_price, D("1.00"))
+        self.assertEqual(coupon.short_label, "R$ 1,00/mês")
+        self.assertContains(self.client.get(reverse("platform:coupon_detail", args=[coupon.pk])), "R$ 1,00/mês")
+        # valor obrigatório e mínimo de R$ 1,00
+        response = self.client.post(reverse("platform:coupon_new"), {"code": "SEMVALOR", "discount_percent": "0",
+                                                                     "is_active": "on"})
+        self.assertIn("fixed_price", response.context["form"].errors)
+        response = self.client.post(reverse("platform:coupon_new"), {"code": "CENTAVOS", "discount_percent": "0",
+                                                                     "fixed_price": "0,50", "is_active": "on"})
+        self.assertIn("fixed_price", response.context["form"].errors)
+        # em cupons percentuais o valor fixo é ignorado
+        self.client.post(reverse("platform:coupon_new"), {"code": "METADE2", "discount_percent": "50",
+                                                          "fixed_price": "1,00", "is_active": "on"})
+        self.assertIsNone(Coupon.objects.get(code="METADE2").fixed_price)
+
+    def test_price_is_one_real_for_any_plan(self):
+        coupon = Coupon.objects.create(code="UMREAL", discount_percent=0, fixed_price=D("1.00"))
+        self.assertEqual(coupon.price_for(D("129.90")), D("1.00"))
+        self.assertEqual(coupon.price_for(D("0.50")), D("0.50"))  # nunca acima do preço cheio
+        redeem_coupon(self.company, "umreal")
+        self.assertEqual(self.company.effective_monthly_price, D("1.00"))
+        self.assertEqual(self.company.discount_percent, 99)
+
+    def test_checkout_charges_one_real_and_restores_after_period(self):
+        Coupon.objects.create(code="UMREAL3", discount_percent=0, fixed_price=D("1.00"), duration_months=3)
+        redemption = redeem_coupon(self.company, "UMREAL3")
+        self.client.force_login(self.company.owner)
+        with mock.patch(GW + "create_preapproval", return_value=preapproval(status="pending")) as create:
+            response = self.client.post(reverse("billing:subscribe"), {"plan": self.pro.pk})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(create.call_args.kwargs["amount"], D("1.00"))
+        sub = Subscription.objects.get()
+        self.assertEqual((sub.amount, sub.full_amount, sub.discount_until), (D("1.00"), D("129.90"),
+                                                                            redemption.expires_at))
+        # depois do prazo do cupom, o valor volta ao preço cheio no Mercado Pago
+        Subscription.objects.filter(pk=sub.pk).update(status="authorized",
+                                                      discount_until=timezone.localdate() - timedelta(days=1))
+        with mock.patch(GW + "update_amount") as update:
+            self.assertEqual(apply_coupon_expirations(), 1)
+        update.assert_called_once_with("pre-1", D("129.90"))
+
+    def test_subscription_page_shows_fixed_price(self):
+        Coupon.objects.create(code="UMREAL", discount_percent=0, fixed_price=D("1.00"))
+        redeem_coupon(self.company, "UMREAL")
+        self.client.force_login(self.company.owner)
+        page = self.client.get(reverse("companies:subscription"))
+        self.assertContains(page, "preço fixo de R$ 1,00/mês")
+        self.assertContains(page, "R$ 1,00")

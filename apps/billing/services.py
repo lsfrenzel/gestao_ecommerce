@@ -56,25 +56,26 @@ def quote(company: Company, plan: Plan) -> dict:
     today = timezone.localdate()
     full = plan.monthly_price
     redemption = company.active_redemption
-    pct = redemption.coupon.discount_percent if redemption else 0
     until = redemption.expires_at if redemption else None
     if redemption and redemption.coupon.plans.exists() and not redemption.coupon.plans.filter(pk=plan.pk).exists():
-        pct, until, redemption = 0, None, None  # cupom não vale para este plano
+        until, redemption = None, None  # cupom não vale para este plano
     first_charge = None
     if company.status == Company.Status.TRIAL and company.trial_ends_at and company.trial_ends_at >= today:
         first_charge = company.trial_ends_at + timedelta(days=1)
-    amount = full
-    free = False
-    if pct == 100:
+    amount = redemption.coupon.price_for(full) if redemption else full
+    pct = redemption.coupon.effective_percent(full) if redemption else 0
+    free = full == 0
+    if redemption and amount == 0:
         if until is None:
-            free, amount = True, Decimal("0.00")
+            free = True  # 100% permanente: sem cobrança
         else:
+            # 100% por um prazo: cartão autorizado agora, 1ª cobrança (preço cheio) depois do prazo
+            amount = full
             after_coupon = until + timedelta(days=1)
             first_charge = max(first_charge or after_coupon, after_coupon)
-    elif pct == 50:
-        amount = (full / 2).quantize(Decimal("0.01"))
     return {"plan": plan, "full_amount": full, "amount": amount, "discount_percent": pct, "discount_until": until,
-            "first_charge": first_charge, "free": free or full == 0, "redemption": redemption}
+            "first_charge": first_charge, "free": free, "redemption": redemption,
+            "coupon_label": redemption.coupon.discount_label if redemption else ""}
 
 
 @transaction.atomic

@@ -91,10 +91,22 @@ PLATFORM_NAME = env("PLATFORM_NAME", "FrenzelTech Ecommerce")
 # ---------------------------------------------------------------------------
 # Assinaturas — Mercado Pago (Mercado Livre). Credenciais em Suas integrações → Credenciais.
 # ---------------------------------------------------------------------------
-MERCADOPAGO_ACCESS_TOKEN = env("MERCADOPAGO_ACCESS_TOKEN").strip()
-MERCADOPAGO_PUBLIC_KEY = env("MERCADOPAGO_PUBLIC_KEY").strip()
+def _credential(*names: str) -> str:
+    """Primeiro valor preenchido entre os nomes aceitos, sem aspas, espaços ou prefixo “Bearer ” colados por engano."""
+    for name in names:
+        value = env(name).strip().strip('"').strip("'").strip()
+        if value.lower().startswith("bearer "):
+            value = value[7:].strip()
+        if value:
+            return value
+    return ""
+
+
+MERCADOPAGO_ACCESS_TOKEN = _credential("MERCADOPAGO_ACCESS_TOKEN", "MERCADO_PAGO_ACCESS_TOKEN", "MP_ACCESS_TOKEN")
+MERCADOPAGO_PUBLIC_KEY = _credential("MERCADOPAGO_PUBLIC_KEY", "MERCADO_PAGO_PUBLIC_KEY", "MP_PUBLIC_KEY")
 # Assinatura secreta do webhook (Suas integrações → Webhooks). Recomendado em produção.
-MERCADOPAGO_WEBHOOK_SECRET = env("MERCADOPAGO_WEBHOOK_SECRET").strip()
+MERCADOPAGO_WEBHOOK_SECRET = _credential("MERCADOPAGO_WEBHOOK_SECRET", "MERCADO_PAGO_WEBHOOK_SECRET",
+                                         "MP_WEBHOOK_SECRET")
 FREE_TRIAL_DAYS = env_int("FREE_TRIAL_DAYS", 14)
 
 INSTALLED_APPS = [

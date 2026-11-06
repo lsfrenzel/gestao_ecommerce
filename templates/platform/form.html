@@ -11,3 +11,22 @@
   </form>
 </div></div>
 {% endblock %}
+{% block scripts %}
+<script>
+  // Cupom: mostra o campo de valor somente para “Preço fixo mensal”.
+  (function () {
+    const radios = document.querySelectorAll('input[name="discount_percent"]');
+    const price = document.getElementById("id_fixed_price");
+    if (!radios.length || !price) return;
+    const box = price.closest(".mb-3");
+    function sync() {
+      const sel = document.querySelector('input[name="discount_percent"]:checked');
+      const fixed = sel && sel.value === "0";
+      box.classList.toggle("d-none", !fixed);
+      if (fixed && !price.value) price.value = "1,00";
+    }
+    radios.forEach((r) => r.addEventListener("change", sync));
+    sync();
+  })();
+</script>
+{% endblock %}

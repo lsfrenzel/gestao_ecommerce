@@ -15,7 +15,7 @@
   <thead><tr><th>Empresa</th><th>Responsável</th><th>Plano</th><th class="num">Assinatura/mês</th><th class="num">Usuários</th><th>Cadastro</th><th>Situação</th></tr></thead>
   <tbody>{% for c in page_obj %}<tr>
     <td><a class="fw-semibold" href="{% url 'platform:company_detail' c.pk %}">{{ c.trade_name }}</a><div class="small text-secondary">{{ c.cnpj|default:"" }} {{ c.get_segment_display }}</div></td>
-    <td class="small">{{ c.owner|default:"—" }}</td><td class="small">{{ c.plan|default:"—" }}</td><td class="num">{% with d=c.discount_percent %}{% if d %}<span class="badge status-ok me-1">-{{ d }}%</span>{% endif %}{% endwith %}{{ c.effective_monthly_price|brl }}</td><td class="num">{{ c.users_n }}</td><td class="small">{{ c.created_at|date:"d/m/Y" }}</td>
+    <td class="small">{{ c.owner|default:"—" }}</td><td class="small">{{ c.plan|default:"—" }}</td><td class="num">{% with r=c.active_redemption %}{% if r %}<span class="badge status-ok me-1" title="Cupom {{ r.coupon.code }}">{{ r.coupon.short_label }}</span>{% endif %}{% endwith %}{{ c.effective_monthly_price|brl }}</td><td class="num">{{ c.users_n }}</td><td class="small">{{ c.created_at|date:"d/m/Y" }}</td>
     <td>{% if c.status == "active" %}<span class="badge status-ok">Ativa</span>{% elif c.status == "trial" %}<span class="badge status-low">Em teste{% if c.trial_expired %} (vencido){% endif %}</span>{% elif c.status == "pending" %}<span class="badge status-low">Aguardando assinatura</span>{% else %}<span class="badge status-out">Suspensa</span>{% endif %}</td>
   </tr>{% empty %}<tr><td colspan="7"><div class="empty-state"><i class="bi bi-buildings"></i>Nenhuma empresa.</div></td></tr>{% endfor %}</tbody>
 </table></div></div>

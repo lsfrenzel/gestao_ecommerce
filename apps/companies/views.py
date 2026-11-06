@@ -43,26 +43,44 @@ def onboarding(request):
                 messages.warning(request, f"A empresa foi criada, mas o cupom não pôde ser aplicado: {exc}")
             else:
                 messages.success(request, f"Cupom {redemption.coupon.code} aplicado: "
-                                          f"{redemption.coupon.discount_percent}% de desconto na assinatura.")
+                                          f"{redemption.coupon.discount_label} na assinatura.")
         if plan is None:
             messages.info(request, f"Seu teste grátis de {settings.FREE_TRIAL_DAYS} dias começou. "
                                    "Assine um plano quando quiser em Configurações → Assinatura.")
             return redirect("dashboard:home")
         # Plano escolhido: sem teste grátis — segue direto para o pagamento.
+        trial_plan = company.plan
         company.status, company.trial_ends_at, company.plan = Company.Status.PENDING, None, plan
         company.save(update_fields=["status", "trial_ends_at", "plan", "updated_at"])
-        return checkout_redirect(request, company, plan)
+        return checkout_redirect(request, company, plan, fallback_trial_plan=trial_plan)
     return render(request, "companies/onboarding.html", {"form": form, "trial_days": settings.FREE_TRIAL_DAYS})
 
 
-def checkout_redirect(request, company, plan):
-    """Cria a assinatura e envia ao checkout do Mercado Pago (ou ativa direto, se gratuita)."""
+def checkout_redirect(request, company, plan, *, fallback_trial_plan=None):
+    """
+    Cria a assinatura e envia ao checkout do Mercado Pago (ou ativa direto, se gratuita).
+    No cadastro (`fallback_trial_plan`), se o pagamento não puder ser aberto, a empresa começa no teste grátis
+    em vez de ficar bloqueada — e pode assinar depois em Configurações → Assinatura.
+    """
+    import logging
+
     from apps.billing import gateway
     from apps.billing.services import BillingError, start_checkout
 
     try:
         sub = start_checkout(company, plan, user=request.user, request=request)
     except (BillingError, gateway.GatewayError) as exc:
+        logging.getLogger(__name__).warning("Checkout indisponível para a empresa %s: %s", company.pk, exc)
+        # Também libera o teste para empresas que escolheram plano no cadastro e nunca conseguiram pagar.
+        never_started = (company.status == Company.Status.PENDING and company.trial_ends_at is None
+                         and company.access_until is None and not company.subscriptions.exists())
+        if fallback_trial_plan is not None or never_started:
+            company.start_trial(fallback_trial_plan or plan)
+            company.save(update_fields=["plan", "status", "trial_ends_at", "updated_at"])
+            messages.warning(request, f"Não foi possível abrir o pagamento do plano {plan.name} agora ({exc}). "
+                                      f"Você começou no teste grátis de {settings.FREE_TRIAL_DAYS} dias e pode "
+                                      "assinar a qualquer momento em Configurações → Assinatura.")
+            return redirect("dashboard:home")
         messages.error(request, str(exc))
         return redirect("companies:subscription")
     if sub.is_active:
@@ -86,7 +104,7 @@ def subscription(request):
             form.add_error("code", str(exc))
         else:
             messages.success(request, f"Cupom {redemption.coupon.code} aplicado: "
-                                      f"{redemption.coupon.discount_percent}% de desconto na assinatura.")
+                                      f"{redemption.coupon.discount_label} na assinatura.")
             return redirect("companies:subscription")
     sub = current_subscription(company)
     plans = [quote(company, p) for p in Plan.objects.filter(is_active=True).order_by("monthly_price", "name")]

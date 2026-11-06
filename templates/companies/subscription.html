@@ -40,7 +40,7 @@
 
 {# ---- Planos ---- #}
 <h2 class="h6 text-uppercase text-secondary mb-2">Planos</h2>
-{% if not payments_enabled %}<div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle me-1"></i>Pagamento online indisponível no momento (credenciais do Mercado Pago não configuradas). Fale com o suporte.</div>{% endif %}
+
 {% if test_mode %}<div class="alert alert-info py-2 small"><i class="bi bi-bug me-1"></i>Mercado Pago em <strong>modo de teste</strong>: use um usuário comprador de teste no checkout.</div>{% endif %}
 <div class="row g-3 mb-3">
   {% for q in plans %}{% with plan=q.plan %}
@@ -50,7 +50,7 @@
     <div class="mb-2">
       {% if q.discount_percent %}<span class="text-secondary text-decoration-line-through small">{{ q.full_amount|brl }}</span> {% endif %}
       <span class="fs-4 fw-bold">{% if q.free %}Grátis{% else %}{{ q.amount|brl }}{% endif %}</span>{% if not q.free %}<span class="text-secondary small">/mês</span>{% endif %}
-      {% if q.discount_percent %}<div class="small text-positive">cupom de {{ q.discount_percent }}%{% if q.discount_until %} até {{ q.discount_until|date:"d/m/Y" }}{% endif %}</div>{% endif %}
+      {% if q.redemption %}<div class="small text-positive">cupom: {{ q.coupon_label }}{% if q.discount_until %} até {{ q.discount_until|date:"d/m/Y" }}{% endif %}</div>{% endif %}
     </div>
     <p class="small text-secondary">{{ plan.description }}</p>
     <ul class="small mb-3 ps-3"><li>Usuários: {{ plan.max_users|default:"ilimitados" }}</li><li>Produtos: {{ plan.max_products|default:"ilimitados" }}</li>
@@ -60,8 +60,6 @@
       <input type="hidden" name="plan" value="{{ plan.pk }}">
       {% if subscription.plan_id == plan.pk and subscription.is_active %}
         <button class="btn btn-outline-secondary w-100" disabled>Plano atual</button>
-      {% elif not q.free and not payments_enabled %}
-        <button class="btn btn-outline-secondary w-100" disabled>Indisponível</button>
       {% else %}
         <button class="btn btn-brand w-100">{% if q.free %}Ativar plano{% elif subscription.is_active %}Mudar para este plano{% else %}Assinar com Mercado Pago{% endif %}</button>
       {% endif %}
@@ -74,7 +72,7 @@
   <div class="col-lg-5">
     <div class="card mb-3"><div class="card-header">Cupom de desconto</div><div class="card-body">
       {% if redemption %}
-      <div class="alert alert-success py-2 small mb-0"><i class="bi bi-ticket-perforated me-1"></i>Cupom <strong>{{ redemption.coupon.code }}</strong>: {{ redemption.coupon.discount_percent }}% de desconto {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}. O desconto já aparece nos preços acima.</div>
+      <div class="alert alert-success py-2 small mb-0"><i class="bi bi-ticket-perforated me-1"></i>Cupom <strong>{{ redemption.coupon.code }}</strong>: {{ redemption.coupon.discount_label }} {% if redemption.expires_at %}até {{ redemption.expires_at|date:"d/m/Y" }}{% else %}permanente{% endif %}. O desconto já aparece nos preços acima.</div>
       {% else %}
       <form method="post" novalidate>{% csrf_token %}
         {% for field in form %}{% include "partials/field.html" %}{% endfor %}

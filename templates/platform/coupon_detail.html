@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <div><a class="small" href="{% url 'platform:coupons' %}"><i class="bi bi-arrow-left"></i> Cupons</a>
-    <h1 class="font-monospace">{{ coupon.code }} <span class="badge {% if coupon.discount_percent == 100 %}text-bg-success{% else %}badge-soft{% endif %} fs-6 align-middle">{{ coupon.discount_percent }}% de desconto</span></h1>
+    <h1 class="font-monospace">{{ coupon.code }} <span class="badge {% if coupon.discount_percent == 100 or coupon.is_fixed %}text-bg-success{% else %}badge-soft{% endif %} fs-6 align-middle">{{ coupon.discount_label }}</span></h1>
     <div class="subtitle">{{ coupon.description|default:"Sem descrição" }}</div></div>
   <div class="d-flex gap-2">
     <a class="btn btn-outline-primary" href="{% url 'platform:coupon_edit' coupon.pk %}"><i class="bi bi-pencil me-1"></i>Editar</a>

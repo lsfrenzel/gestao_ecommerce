@@ -82,8 +82,21 @@ def home(request):
         "plans": {"labels": [p["name"] for p in by_plan], "values": [p["users_n"] for p in by_plan]},
     })
     recent = AuditLog.objects.filter(platform_scope=True).select_related("actor")[:8]
+    from django.conf import settings as dj_settings
+
+    from apps.billing import gateway
+    from apps.billing.models import Subscription, WebhookEvent
+
+    payments = {
+        "configured": gateway.is_configured(), "test_mode": gateway.is_test_mode(),
+        "public_key": bool(dj_settings.MERCADOPAGO_PUBLIC_KEY), "webhook_secret": bool(dj_settings.MERCADOPAGO_WEBHOOK_SECRET),
+        "webhook_url": dj_settings.SITE_URL + "/assinatura/webhook/mercadopago/",
+        "active": Subscription.objects.filter(status__in=Subscription.ACTIVE_STATUSES).count(),
+        "pending": Subscription.objects.filter(status=Subscription.Status.PENDING).count(),
+        "last_webhook": WebhookEvent.objects.first(),
+    }
     return render(request, "platform/home.html", {"stats": stats, "by_plan": by_plan, "chart": chart,
-                                                  "recent": recent})
+                                                  "recent": recent, "payments": payments})
 
 
 @superadmin_required
@@ -362,8 +375,8 @@ def coupon_form(request, pk=None):
         obj.save()
         form.save_m2m()
         log_action("platform.coupon_save", request=request, target=obj, platform=True,
-                   details={"codigo": obj.code, "desconto": obj.discount_percent, "campos": form.changed_data})
-        messages.success(request, f"Cupom {obj.code} salvo ({obj.discount_percent}% de desconto).")
+                   details={"codigo": obj.code, "desconto": obj.discount_label, "campos": form.changed_data})
+        messages.success(request, f"Cupom {obj.code} salvo ({obj.discount_label}).")
         return redirect("platform:coupon_detail", pk=obj.pk)
     return render(request, "platform/form.html", {
         "form": form, "title": f"Editar cupom {coupon.code}" if coupon else "Novo cupom", "back": "platform:coupons",
@@ -409,8 +422,8 @@ def company_coupon(request, pk):
         except CouponError as exc:
             messages.error(request, str(exc))
         else:
-            messages.success(request, f"Cupom {redemption.coupon.code} aplicado: {redemption.coupon.discount_percent}% "
-                                      f"de desconto — assinatura de {format_brl(company.effective_monthly_price)} "
+            messages.success(request, f"Cupom {redemption.coupon.code} aplicado: {redemption.coupon.discount_label} "
+                                      f"— assinatura de {format_brl(company.effective_monthly_price)} "
                                       "por mês.")
     else:
         messages.error(request, "Informe o código do cupom.")

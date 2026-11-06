@@ -80,11 +80,8 @@ class OnboardingForm(CompanyForm):
         super().__init__(*args, **kwargs)
         self.payments_enabled = gateway.is_configured()
         self.plans = list(Plan.objects.filter(is_active=True).order_by("monthly_price", "name"))
-        choices = [(self.TRIAL, "Teste grátis")]
-        for plan in self.plans:
-            if plan.monthly_price == 0 or self.payments_enabled:
-                choices.append((str(plan.pk), plan.name))
-        self.fields["plan_choice"].choices = choices
+        # Todos os planos ativos podem ser escolhidos; o pagamento é feito em seguida no checkout do Mercado Pago.
+        self.fields["plan_choice"].choices = [(self.TRIAL, "Teste grátis")] + [(str(p.pk), p.name) for p in self.plans]
 
     def selected_plan(self):
         value = self.cleaned_data.get("plan_choice")

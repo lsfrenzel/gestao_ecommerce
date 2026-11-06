@@ -20,9 +20,8 @@
       </span>
     </label>
     {% for plan in form.plans %}
-    <label class="plan-option {% if plan.monthly_price and not form.payments_enabled %}disabled{% endif %}">
-      <input type="radio" name="plan_choice" value="{{ plan.pk }}" {% if form.plan_choice.value == plan.pk|stringformat:"s" %}checked{% endif %}
-             {% if plan.monthly_price and not form.payments_enabled %}disabled{% endif %}>
+    <label class="plan-option">
+      <input type="radio" name="plan_choice" value="{{ plan.pk }}" {% if form.plan_choice.value == plan.pk|stringformat:"s" %}checked{% endif %}>
       <span class="plan-card">
         {% if plan.is_default %}<span class="plan-badge">Mais escolhido</span>{% endif %}
         <span class="plan-name">{{ plan.name }}</span>
@@ -33,8 +32,7 @@
     </label>
     {% endfor %}
   </div>
-  {% if not form.payments_enabled %}<div class="small text-secondary mb-3"><i class="bi bi-info-circle me-1"></i>A assinatura online dos planos pagos ainda não está disponível. Comece pelo teste grátis.</div>
-  {% else %}<div class="small text-secondary mb-3"><i class="bi bi-lock me-1"></i>Planos pagos: pagamento mensal recorrente pelo <strong>Mercado Pago</strong>. Cancele quando quiser.</div>{% endif %}
+  <div class="small text-secondary mb-3"><i class="bi bi-lock me-1"></i>Planos pagos: depois do cadastro você segue para o checkout do <strong>Mercado Pago</strong> (cobrança mensal no cartão). Cancele quando quiser.</div>
   {% for e in form.plan_choice.errors %}<div class="invalid-feedback d-block mb-2">{{ e }}</div>{% endfor %}
 
   <div class="mb-1 mt-3 fw-semibold small text-uppercase text-secondary">2. Dados da empresa</div>

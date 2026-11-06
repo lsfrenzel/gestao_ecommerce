@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django import forms
 
 from apps.companies.models import PLAN_FEATURES, Company, Membership, Plan
-from apps.core.forms import DateInput, StyledForm, StyledFormMixin
+from apps.core.forms import BRDecimalField, DateInput, StyledForm, StyledFormMixin
 
 
 class PlanForm(StyledFormMixin, forms.ModelForm):
@@ -67,9 +69,15 @@ class CreateUserForm(StyledForm):
 
 
 class CouponForm(StyledFormMixin, forms.ModelForm):
-    discount_percent = forms.TypedChoiceField(label="Desconto na assinatura", coerce=int,
-                                              choices=[(50, "50% de desconto"), (100, "100% de desconto (gratuito)")],
-                                              widget=forms.RadioSelect)
+    MIN_FIXED_PRICE = Decimal("1.00")
+
+    discount_percent = forms.TypedChoiceField(
+        label="Tipo de desconto na assinatura", coerce=int, widget=forms.RadioSelect,
+        choices=[(50, "50% de desconto"), (100, "100% de desconto (gratuito)"), (0, "Preço fixo mensal")])
+    fixed_price = BRDecimalField(label="Preço fixo mensal (R$)", required=False, max_digits=10, decimal_places=2,
+                                 widget=forms.TextInput(attrs={"inputmode": "decimal", "placeholder": "1,00"}),
+                                 help_text="Somente para “Preço fixo mensal”: valor cobrado por mês em qualquer plano "
+                                           "(mínimo R$ 1,00). Ex.: 1,00")
     plans = forms.ModelMultipleChoiceField(label="Planos aceitos", queryset=Plan.objects.all(), required=False,
                                            widget=forms.CheckboxSelectMultiple,
                                            help_text="Nenhum marcado = vale para qualquer plano.")
@@ -78,9 +86,21 @@ class CouponForm(StyledFormMixin, forms.ModelForm):
         from apps.companies.models import Coupon
 
         model = Coupon
-        fields = ["code", "description", "discount_percent", "duration_months", "valid_until", "max_redemptions",
-                  "plans", "is_active"]
+        fields = ["code", "description", "discount_percent", "fixed_price", "duration_months", "valid_until",
+                  "max_redemptions", "plans", "is_active"]
         widgets = {"valid_until": DateInput()}
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("discount_percent") == 0:
+            price = cleaned.get("fixed_price")
+            if price is None:
+                self.add_error("fixed_price", "Informe o valor mensal do cupom de preço fixo.")
+            elif price < self.MIN_FIXED_PRICE:
+                self.add_error("fixed_price", "O valor mínimo é R$ 1,00 (para cobrança zero, use 100% de desconto).")
+        else:
+            cleaned["fixed_price"] = None
+        return cleaned
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

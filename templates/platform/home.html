@@ -8,6 +8,21 @@
   <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Empresas</div><div class="value">{{ stats.companies }}</div><div class="hint">{{ stats.companies_active }} ativas · {{ stats.companies_trial }} em teste · <span class="text-danger">{{ stats.companies_suspended }} suspensas</span></div></div></div>
   <div class="col-6 col-xl-3"><div class="card kpi"><div class="label">Acessos (logins)</div><div class="value">{{ stats.logins_30d }}</div><div class="hint">últimos 30 dias · {{ stats.logins_total }} no total</div></div></div>
 </div>
+<div class="card mb-3 {% if not payments.configured %}border-danger-subtle{% endif %}"><div class="card-body d-flex flex-wrap gap-3 align-items-center">
+  <div class="flex-grow-1">
+    <div class="fw-semibold text-navy"><i class="bi bi-credit-card me-1"></i>Pagamentos — Mercado Pago</div>
+    {% if payments.configured %}
+      <div class="small"><span class="badge {% if payments.test_mode %}text-bg-warning{% else %}status-ok{% endif %}">{% if payments.test_mode %}Credenciais de TESTE{% else %}Produção{% endif %}</span>
+        {{ payments.active }} assinatura(s) ativa(s) · {{ payments.pending }} aguardando pagamento
+        {% if not payments.public_key %}· <span class="text-warning">MERCADOPAGO_PUBLIC_KEY ausente</span>{% endif %}
+        {% if not payments.webhook_secret %}· <span class="text-warning">sem MERCADOPAGO_WEBHOOK_SECRET (webhook sem validação de assinatura)</span>{% endif %}</div>
+      <div class="small text-secondary">Webhook: <code>{{ payments.webhook_url }}</code>{% if payments.last_webhook %} · última notificação {{ payments.last_webhook.received_at|date:"d/m/Y H:i" }}{% else %} · nenhuma notificação recebida ainda{% endif %}</div>
+    {% else %}
+      <div class="small text-danger"><strong>Não configurado:</strong> o serviço não encontrou a variável <code>MERCADOPAGO_ACCESS_TOKEN</code>.
+        Cadastre-a nas Variables do serviço web no Railway (com o valor da credencial, sem aspas) e faça o redeploy. Enquanto isso, quem escolhe um plano pago começa no teste grátis.</div>
+    {% endif %}
+  </div>
+</div></div>
 <div class="row g-3 mb-3">
   <div class="col-lg-4"><div class="card h-100"><div class="card-header">Novos cadastros por mês</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-signups"></canvas></div></div></div></div>
   <div class="col-lg-4"><div class="card h-100"><div class="card-header">Acessos por dia (30 dias)</div><div class="card-body"><div class="chart-box sm"><canvas id="ch-logins"></canvas></div></div></div></div>

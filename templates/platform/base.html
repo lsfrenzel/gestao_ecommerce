@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
 {% block body_class %}platform{% endblock %}
 {% block body %}
 {% with path=request.path %}
 <div class="app-shell">
   <aside class="sidebar" aria-label="Menu da plataforma">
-    <a class="brand" href="{% url 'platform:home' %}"><span class="logo" style="background:#ef4444"><i class="bi bi-shield-lock"></i></span>SUPER ADMIN</a>
+    <a class="brand" href="{% url 'platform:home' %}" title="{{ PLATFORM_NAME }}"><img src="{% static 'images/logo-white.png' %}" alt="FrenzelTech"><span class="brand-sub">Super Admin</span></a>
     <nav class="nav flex-column">
       <a class="nav-link {% if path == '/plataforma/' %}active{% endif %}" href="{% url 'platform:home' %}"><i class="bi bi-speedometer2"></i>Visão geral</a>
       <a class="nav-link {% if '/usuarios/' in path %}active{% endif %}" href="{% url 'platform:users' %}"><i class="bi bi-people"></i>Usuários</a>

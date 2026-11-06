@@ -78,6 +78,29 @@
     }
   });
 
+  // Mostrar/ocultar senha: botões explícitos e, nas telas de acesso, todos os campos de senha.
+  function enhancePasswords() {
+    document.querySelectorAll(".auth-form input[type=password]").forEach((input) => {
+      if (input.closest(".input-icon")) return;
+      const wrap = document.createElement("div");
+      wrap.className = "input-icon has-toggle";
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      wrap.insertAdjacentHTML("beforeend", `<button type="button" class="toggle-pass" data-toggle-password="${input.id}" aria-label="Mostrar senha"><i class="bi bi-eye"></i></button>`);
+    });
+  }
+  document.addEventListener("DOMContentLoaded", enhancePasswords);
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest("[data-toggle-password]");
+    if (!btn) return;
+    const input = document.getElementById(btn.dataset.togglePassword);
+    if (!input) return;
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    btn.setAttribute("aria-label", show ? "Ocultar senha" : "Mostrar senha");
+    btn.querySelector("i").className = show ? "bi bi-eye-slash" : "bi bi-eye";
+  });
+
   document.addEventListener("submit", function (e) {
     const form = e.target;
     if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) e.preventDefault();

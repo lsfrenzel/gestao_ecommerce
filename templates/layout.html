@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load ui static %}
 {% block body %}
 {% with path=request.path %}
 <div class="app-shell">
   <aside class="sidebar" aria-label="Menu principal">
-    <a class="brand" href="{% url 'dashboard:home' %}"><span class="logo"><i class="bi bi-graph-up-arrow"></i></span>{{ PLATFORM_NAME }}</a>
+    <a class="brand" href="{% url 'dashboard:home' %}" title="{{ PLATFORM_NAME }}"><img src="{% static 'images/logo-white.png' %}" alt="FrenzelTech"><span class="brand-sub">Ecommerce</span></a>
     <nav class="nav flex-column">
       {% if "dashboard" in allowed_modules %}<a class="nav-link {% if path == '/painel/' %}active{% endif %}" href="{% url 'dashboard:home' %}"><i class="bi bi-speedometer2"></i>Dashboard</a>{% endif %}
       <div class="nav-section">Comercial</div>

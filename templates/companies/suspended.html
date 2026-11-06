@@ -1,7 +1,7 @@
 {% extends "accounts/auth_base.html" %}
 {% block title %}Conta suspensa{% endblock %}
 {% block auth %}
-<h1 class="h4 fw-bold text-danger"><i class="bi bi-pause-circle me-1"></i>Conta da empresa suspensa</h1>
+<h1 class="auth-title text-danger"><i class="bi bi-pause-circle me-1"></i>Conta da empresa suspensa</h1>
 <p class="text-secondary">O acesso de <strong>{{ company }}</strong> está temporariamente suspenso pela administração da plataforma.</p>
 {% if company.suspended_reason %}<p class="small">Motivo: {{ company.suspended_reason }}</p>{% endif %}
 <p class="small text-secondary">Os dados permanecem preservados. Entre em contato com o suporte para regularizar.</p>

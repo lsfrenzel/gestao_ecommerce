@@ -1,4 +1,4 @@
-# Gestão SaaS — gestão inteligente para e-commerce
+# FrenzelTech Ecommerce — gestão inteligente para e-commerce
 
 Plataforma SaaS multiempresa (multi-tenant) para lojistas e pequenos negócios administrarem o e-commerce:
 precificação, markup, margem de contribuição, ponto de equilíbrio, estoque, ponto de pedido, fornecedores,

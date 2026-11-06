@@ -1,15 +1,30 @@
 {% extends "accounts/auth_base.html" %}
 {% block title %}Entrar{% endblock %}
 {% block auth %}
-<h1 class="h3 fw-bold text-navy mb-1">Entrar</h1>
-<p class="text-secondary mb-4">Acesse o painel da sua empresa.</p>
+<h1 class="auth-title">Bem-vindo de volta</h1>
+<p class="auth-subtitle">Entre para acessar o painel da sua empresa.</p>
 <form method="post" novalidate>{% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
-  {% for field in form %}{% include "partials/field.html" %}{% endfor %}
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="{% url 'accounts:password_reset' %}" class="small">Esqueci minha senha</a>
+  <div class="mb-3">
+    <label class="form-label" for="id_email">E-mail</label>
+    <div class="input-icon"><i class="bi bi-envelope"></i>
+      <input type="email" name="email" id="id_email" class="form-control" placeholder="voce@empresa.com.br"
+             value="{{ form.email.value|default_if_none:'' }}" autocomplete="email" autofocus required></div>
   </div>
-  <button class="btn btn-primary w-100 py-2">Entrar</button>
+  <div class="mb-2">
+    <div class="d-flex justify-content-between align-items-baseline">
+      <label class="form-label" for="id_password">Senha</label>
+      <a href="{% url 'accounts:password_reset' %}" class="small">Esqueci minha senha</a>
+    </div>
+    <div class="input-icon has-toggle"><i class="bi bi-lock"></i>
+      <input type="password" name="password" id="id_password" class="form-control" placeholder="Sua senha"
+             autocomplete="current-password" required>
+      <button type="button" class="toggle-pass" data-toggle-password="id_password" aria-label="Mostrar senha"><i class="bi bi-eye"></i></button>
+    </div>
+  </div>
+  <button class="btn btn-brand w-100 mt-4">Entrar <i class="bi bi-arrow-right ms-1"></i></button>
 </form>
-<p class="text-center mt-4 small">Ainda não tem conta? <a href="{% url 'accounts:signup' %}" class="fw-semibold">Cadastre-se grátis</a></p>
+<div class="auth-divider">ou</div>
+<p class="text-center mb-0">Ainda não tem conta? <a href="{% url 'accounts:signup' %}">Crie sua conta grátis</a></p>
+<p class="auth-secure"><i class="bi bi-shield-lock-fill"></i> Acesso protegido · os dados da sua empresa ficam isolados</p>
 {% endblock %}

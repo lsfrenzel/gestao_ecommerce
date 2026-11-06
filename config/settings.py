@@ -1,5 +1,5 @@
 """
-Configurações do Gestão SaaS.
+Configurações do FrenzelTech Ecommerce.
 
 Toda configuração sensível ou dependente de ambiente vem de variáveis de ambiente.
 Veja `.env.example` e `README.md`.
@@ -86,7 +86,7 @@ ALLOWED_HOSTS.append("healthcheck.railway.app")  # health check interno do Railw
 
 _default_site = f"https://{env('RAILWAY_PUBLIC_DOMAIN')}" if env("RAILWAY_PUBLIC_DOMAIN") else "http://localhost:8000"
 SITE_URL = (env("SITE_URL") or _default_site).rstrip("/")
-PLATFORM_NAME = env("PLATFORM_NAME", "Gestão SaaS")
+PLATFORM_NAME = env("PLATFORM_NAME", "FrenzelTech Ecommerce")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

@@ -1,21 +1,33 @@
 {% extends "base.html" %}
+{% load static %}
 {% block body %}
 <div class="auth-wrap">
-  <div class="auth-side">
-    <div style="max-width:460px">
-      <div class="d-flex align-items-center gap-2 mb-4"><span class="avatar" style="background:#34d399;border-radius:10px"><i class="bi bi-graph-up-arrow"></i></span><span class="fs-5 fw-bold text-white">{{ PLATFORM_NAME }}</span></div>
-      <h2 class="mb-3">Gestão inteligente para o seu e-commerce</h2>
-      <p class="mb-4 opacity-75">Precificação, margens, ponto de equilíbrio, estoque, compras, vendas e financeiro em um só lugar — com números reais do seu negócio.</p>
-      <ul class="list-unstyled small opacity-75 d-grid gap-2">
-        <li><i class="bi bi-check2-circle me-2"></i>Quanto cobrar e qual é a sua margem de contribuição</li>
-        <li><i class="bi bi-check2-circle me-2"></i>Quanto vender para atingir o ponto de equilíbrio</li>
-        <li><i class="bi bi-check2-circle me-2"></i>Quando comprar e quanto vale o seu estoque</li>
+  <aside class="auth-side" aria-label="{{ PLATFORM_NAME }}">
+    <img class="auth-logo" src="{% static 'images/logo-white.png' %}" alt="FrenzelTech">
+    <div>
+      <h2>A gestão do seu e-commerce,<br>com <span class="hl">números de verdade</span>.</h2>
+      <p class="lead">Preço certo, margem real, estoque sob controle e resultado do mês — tudo em um só lugar.</p>
+      <ul class="auth-features">
+        <li><span class="ico"><i class="bi bi-calculator"></i></span>
+          <div><strong>Precificação inteligente</strong><span>Preço sugerido, markup e margem de contribuição com impostos, taxas e comissões.</span></div></li>
+        <li><span class="ico"><i class="bi bi-bullseye"></i></span>
+          <div><strong>Ponto de equilíbrio</strong><span>Quanto vender para cobrir as despesas fixas — por produto ou mix.</span></div></li>
+        <li><span class="ico"><i class="bi bi-boxes"></i></span>
+          <div><strong>Estoque e ponto de pedido</strong><span>Alertas automáticos e sugestão de compra pelo histórico de vendas.</span></div></li>
       </ul>
     </div>
-  </div>
-  <div class="auth-form"><div class="box">
-    {% include "partials/messages.html" %}
-    {% block auth %}{% endblock %}
-  </div></div>
+    <div class="auth-foot">
+      <span><i class="bi bi-shield-check"></i>Dados isolados por empresa</span>
+      <span><i class="bi bi-lock"></i>Conexão segura</span>
+      <span><i class="bi bi-file-earmark-lock"></i>LGPD</span>
+    </div>
+  </aside>
+  <main class="auth-form">
+    <div class="box {% block box_class %}{% endblock %}">
+      <img class="form-logo mobile-only" src="{% static 'images/logo.png' %}" alt="FrenzelTech">
+      {% include "partials/messages.html" %}
+      {% block auth %}{% endblock %}
+    </div>
+  </main>
 </div>
 {% endblock %}

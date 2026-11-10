@@ -111,9 +111,28 @@ def cache_get(key: str, max_age: timedelta):
 
 
 def cache_set(key: str, payload) -> None:
+    from django.db import IntegrityError, transaction
+
     from .models import CachedLookup
 
-    CachedLookup.objects.update_or_create(key=key, defaults={"payload": payload, "fetched_at": timezone.now()})
+    try:
+        with transaction.atomic():
+            CachedLookup.objects.update_or_create(key=key, defaults={"payload": payload,
+                                                                     "fetched_at": timezone.now()})
+    except IntegrityError:  # outra requisição gravou a mesma chave ao mesmo tempo: o cache já está preenchido
+        logger.info("Cache %s gravado por outra requisição.", key[:12])
+
+
+FAILURE_BACKOFF = timedelta(minutes=10)
+
+
+def recently_failed(key: str) -> bool:
+    """Evita repetir, a cada tela, uma consulta externa que acabou de falhar (espera até o timeout)."""
+    return cache_get(f"fail:{key}"[:64], FAILURE_BACKOFF) is not None
+
+
+def mark_failed(key: str) -> None:
+    cache_set(f"fail:{key}"[:64], {"failed": True})
 
 
 # ---------------------------------------------------------------------------
@@ -309,6 +328,8 @@ def trending_now(geo: str = "BR", limit: int = 20) -> list[dict]:
     cached = cache_get(key, timedelta(hours=1))
     if cached is not None:
         return cached.get("items", [])[:limit]
+    if recently_failed(key):
+        return []
     items: list[dict] = []
     try:
         if settings.SERPAPI_API_KEY:
@@ -324,6 +345,7 @@ def trending_now(geo: str = "BR", limit: int = 20) -> list[dict]:
                                              timeout=10))[:limit]
     except TrendsError as exc:
         logger.info("Em alta agora indisponível: %s", exc)
+        mark_failed(key)
         return []
     cache_set(key, {"items": items})
     return items

@@ -121,6 +121,23 @@ def entry_form(request, pk=None):
                                                    "cancel_url": "/financeiro/"})
 
 
+def _back_to_list(request, kind):
+    """Volta para a lista de onde veio a ação, mantendo filtros e busca (somente URLs do próprio site)."""
+    from urllib.parse import urlparse
+
+    from django.urls import reverse
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    referer = request.META.get("HTTP_REFERER", "")
+    list_path = reverse("finance:entries", kwargs={"kind": kind})
+    if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()},
+                                                   require_https=request.is_secure()):
+        parsed = urlparse(referer)
+        if parsed.path == list_path:
+            return redirect(list_path + (f"?{parsed.query}" if parsed.query else ""))
+    return redirect(list_path)
+
+
 @company_view("finance", feature="finance")
 @require_POST
 def entry_settle(request, pk):
@@ -129,7 +146,7 @@ def entry_settle(request, pk):
     kind = "pagar" if entry.type == FinancialEntry.Type.PAYABLE else "receber"
     if not form.is_valid():
         messages.error(request, "Informe data e valor válidos.")
-        return redirect("finance:entries", kind=kind)
+        return _back_to_list(request, kind)
     try:
         services.settle(entry, settled_at=form.cleaned_data["settled_at"], amount=form.cleaned_data["amount"])
     except ValueError as exc:
@@ -138,7 +155,7 @@ def entry_settle(request, pk):
         log_action("finance.settle", request=request, target=entry,
                    details={"valor": str(form.cleaned_data["amount"])})
         messages.success(request, "Pagamento registrado." if kind == "pagar" else "Recebimento registrado.")
-    return redirect("finance:entries", kind=kind)
+    return _back_to_list(request, kind)
 
 
 @company_view("finance", manager=True, feature="finance")
@@ -153,7 +170,7 @@ def entry_cancel(request, pk):
         entry.save(update_fields=["status", "updated_at"])
         log_action("finance.cancel", request=request, target=entry)
         messages.success(request, "Lançamento cancelado.")
-    return redirect("finance:entries", kind=kind)
+    return _back_to_list(request, kind)
 
 
 class CategoryList(TenantListView):

@@ -226,6 +226,23 @@ class FinanceAndReportTests(CompanyTestCase):
         with self.assertRaises(ValueError):
             finance.settle(entry, settled_at=timezone.localdate())
 
+    def test_settle_returns_to_filtered_list(self):
+        entry = FinancialEntry.objects.get(description="Aluguel")
+        list_url = reverse("finance:entries", kwargs={"kind": "pagar"}) + "?situacao=abertos&q=Aluguel"
+        response = self.client.post(reverse("finance:entry_settle", args=[entry.pk]),
+                                    {"settled_at": timezone.localdate().isoformat(), "amount": "50"},
+                                    HTTP_REFERER="http://testserver" + list_url)
+        self.assertRedirects(response, list_url, fetch_redirect_response=False)
+        # Referer externo é ignorado (sem redirecionamento aberto).
+        other = FinancialEntry.objects.create(company=self.company, type="payable", category=entry.category,
+                                              description="Outro", amount=D("10"),
+                                              competence_date=timezone.localdate(), due_date=timezone.localdate())
+        response = self.client.post(reverse("finance:entry_settle", args=[other.pk]),
+                                    {"settled_at": timezone.localdate().isoformat(), "amount": "10"},
+                                    HTTP_REFERER="https://evil.example/financeiro/contas/pagar/")
+        self.assertRedirects(response, reverse("finance:entries", kwargs={"kind": "pagar"}),
+                             fetch_redirect_response=False)
+
     def test_generate_fixed_expenses_without_duplicates(self):
         cat = FinancialCategory.objects.get(company=self.company, name="Internet e telefone")
         FixedExpense.objects.create(company=self.company, name="Internet", category=cat, monthly_amount=D("100"),

@@ -339,8 +339,21 @@ class GatewayUnitTests(TestCase):
 
     @override_settings(MERCADOPAGO_ACCESS_TOKEN="")
     def test_not_configured_raises(self):
-        with self.assertRaises(gateway.GatewayError):
+        with self.assertRaises(gateway.GatewayError) as ctx, self.assertLogs("apps.billing.gateway", "ERROR"):
             gateway.get_preapproval("x")
+        # O cliente não vê nomes de variáveis de ambiente; o detalhe técnico fica no log.
+        self.assertNotIn("MERCADOPAGO", str(ctx.exception))
+        self.assertIn("temporariamente indisponível", str(ctx.exception))
+
+    @override_settings(MERCADOPAGO_ACCESS_TOKEN="APP_USR-invalido")
+    def test_invalid_credential_shows_friendly_message(self):
+        from urllib import error
+
+        exc = error.HTTPError("https://api.mercadopago.com/preapproval/x", 401, "Unauthorized", {},
+                              io.BytesIO(b'{"message": "invalid access token"}'))
+        with mock.patch("apps.billing.gateway.request.urlopen", side_effect=exc),                 self.assertLogs("apps.billing.gateway", "ERROR"), self.assertRaises(gateway.GatewayError) as ctx:
+            gateway.get_preapproval("x")
+        self.assertNotIn("access token", str(ctx.exception))
 
     @override_settings(MERCADOPAGO_ACCESS_TOKEN="TEST-1")
     def test_create_preapproval_payload(self):

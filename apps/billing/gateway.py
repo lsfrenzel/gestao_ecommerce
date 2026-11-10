@@ -40,7 +40,10 @@ def is_test_mode() -> bool:
 
 def _request(method: str, path: str, payload: dict | None = None) -> dict:
     if not is_configured():
-        raise GatewayError("Pagamentos indisponíveis: MERCADOPAGO_ACCESS_TOKEN não configurado.")
+        # Detalhe técnico só no log (e no diagnóstico do painel SUPER ADMIN); o cliente vê uma mensagem amigável.
+        logger.error("Mercado Pago: MERCADOPAGO_ACCESS_TOKEN não configurado.")
+        raise GatewayError("O pagamento online está temporariamente indisponível. Tente novamente mais tarde "
+                           "ou fale com o suporte.")
     data = json.dumps(payload).encode() if payload is not None else None
     req = request.Request(API_BASE + path, data=data, method=method)
     req.add_header("Authorization", f"Bearer {settings.MERCADOPAGO_ACCESS_TOKEN}")
@@ -59,6 +62,11 @@ def _request(method: str, path: str, payload: dict | None = None) -> dict:
             message = json.loads(detail).get("message") or detail
         except ValueError:
             message = detail
+        if exc.code in (401, 403):
+            # Credencial inválida/sem permissão: problema de configuração, não do cliente.
+            logger.error("Mercado Pago rejeitou a credencial (%s): verifique MERCADOPAGO_ACCESS_TOKEN.", exc.code)
+            raise GatewayError("O pagamento online está temporariamente indisponível. Tente novamente mais tarde "
+                               "ou fale com o suporte.") from exc
         raise GatewayError(f"O Mercado Pago recusou a operação ({exc.code}): {message}") from exc
     except (error.URLError, TimeoutError, ValueError) as exc:
         logger.warning("Mercado Pago indisponível: %s", exc)

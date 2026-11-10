@@ -284,6 +284,28 @@ class FxTests(TestCase):
         with mock.patch.object(fx, "_awesome", side_effect=OSError), mock.patch.object(fx, "_ptax", side_effect=OSError):
             self.assertIsNone(fx.usd_brl())
 
+    def test_failure_is_not_retried_on_every_recalculation(self):
+        with mock.patch.object(fx, "_awesome", side_effect=OSError) as awesome,                 mock.patch.object(fx, "_ptax", side_effect=OSError):
+            fx.usd_brl()
+            fx.usd_brl()
+            fx.usd_brl()
+        self.assertEqual(awesome.call_count, 1)
+
+
+class TrendingBackoffTests(TestCase):
+    @override_settings(SERPAPI_API_KEY="")
+    def test_trending_failure_is_cached_briefly(self):
+        with mock.patch.object(trends, "_read", side_effect=trends.TrendsError("fora do ar")) as read:
+            self.assertEqual(trends.trending_now(), [])
+            self.assertEqual(trends.trending_now(), [])
+        self.assertEqual(read.call_count, 1)
+
+    def test_concurrent_cache_write_is_tolerated(self):
+        from django.db import IntegrityError
+
+        with mock.patch.object(CachedLookup.objects, "update_or_create", side_effect=IntegrityError):
+            trends.cache_set("chave", {"a": 1})  # não levanta erro
+
 
 class AutoAssumptionTests(CompanyTestCase):
     def cleaned(self, **extra):

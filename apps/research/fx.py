@@ -18,7 +18,7 @@ from urllib import error, parse, request
 from django.conf import settings
 from django.utils import timezone
 
-from .trends import cache_get, cache_set
+from .trends import cache_get, cache_set, mark_failed, recently_failed
 
 logger = logging.getLogger(__name__)
 AWESOME = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
@@ -63,6 +63,8 @@ def usd_brl() -> Quote | None:
     cached = cache_get("fx:usd-brl", timedelta(hours=1))
     if cached:
         return Quote(rate=Decimal(cached["rate"]), source=cached["source"], quoted_at=cached["quoted_at"])
+    if recently_failed("fx:usd-brl"):
+        return None  # sem nova tentativa por alguns minutos: o usuário informa a cotação manualmente
     for source in (_awesome, _ptax):
         try:
             quote = source()
@@ -72,4 +74,5 @@ def usd_brl() -> Quote | None:
         if quote.rate > 0:
             cache_set("fx:usd-brl", {"rate": str(quote.rate), "source": quote.source, "quoted_at": quote.quoted_at})
             return quote
+    mark_failed("fx:usd-brl")
     return None
